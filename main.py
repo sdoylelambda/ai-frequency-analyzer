@@ -8,17 +8,15 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from datetime import datetime
-
-
-# Helper
-def log_alert_to_file(frequency, magnitude, label):
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    with open("frequency_alerts.log", "a") as log_file:
-        log_file.write(f"[{timestamp}] ALERT: {label} — {frequency:.1f} Hz, Magnitude: {magnitude:.1f}\n")
+from alert_system import match_frequency_to_band, log_alert_to_file, log_alert_to_gui
+from fft_processor import compute_fft, detect_peaks
+from alert_system import log_alert_to_file, log_alert_to_gui
+from audio_stream import AudioStream
 
 
 class AudioVisualizerApp:
     def __init__(self, root):
+        self.audio = AudioStream()
         self.alert_text = None
         self.canvas = None
         self.log_text = None
@@ -154,21 +152,17 @@ class AudioVisualizerApp:
 
     def start_visualization(self):
         """Start the audio visualization."""
-        self.is_running = True
-        self.status_label.config(text="Status: Visualizing...")
-        self.log_message("Started visualization.")
-
-        # Start audio stream and animation
-        self.visualize_audio()
+        try:
+            self.audio.open_stream()
+        except RuntimeError as e:
+            messagebox.showerror("Error", str(e))
+            self.stop_visualization()
+            return
 
     def stop_visualization(self):
         """Stop the audio visualization."""
-        if self.stream:
-            self.stream.stop_stream()
-            self.stream.close()
-        self.is_running = False
-        self.status_label.config(text="Status: Stopped")
-        self.log_message("Stopped visualization.")
+        self.audio.close()
+        # self.audio.terminate()
 
     def visualize_audio(self):
         """Visualizes the audio data and sets up the animation."""
@@ -208,20 +202,11 @@ class AudioVisualizerApp:
 
     def read_audio_data(self):
         """Read audio data from the microphone."""
-        if not self.is_running:
-            return
-
         try:
-            data = self.stream.read(1024, exception_on_overflow=False)
-            data_int = struct.unpack(str(1024) + 'h', data)
-            self.data_buffer = np.array(data_int, dtype='h')
-
-            if self.alert_var.get():
-                self.check_for_hidden_messages(self.data_buffer)
-
-            self.root.after(10, self.read_audio_data)
+            self.data_buffer = self.audio.read_data()
+            # continue FFT, alerts, etc...
         except OSError:
-            self.status_label.config(text="Status: Microphone Error")
+            self.status_label.config(text="Status: Mic Error")
             self.stop_visualization()
 
     def check_for_hidden_messages(self, data):
@@ -238,118 +223,31 @@ class AudioVisualizerApp:
         self.alert_text.configure(state='disabled')
 
     def update_line(self, frame):
-        # === Update waveform ===
-        global alert_msg
+        # Update waveform
         self.line_waveform.set_ydata(self.data_buffer)
         self.line_waveform.set_xdata(np.arange(len(self.data_buffer)))
         self.ax_waveform.set_ylim(-4000, 4000)
         self.ax_waveform.set_xlim(0, len(self.data_buffer))
 
-        # === Compute FFT ===
-        fft_data = np.fft.fft(self.data_buffer)
-        freqs = np.fft.fftfreq(len(fft_data), 1 / 44100)
-        magnitude = np.abs(fft_data[:len(freqs) // 2])
-        freqs = freqs[:len(freqs) // 2]
-
+        # Compute FFT
+        freqs, magnitude = compute_fft(self.data_buffer)
         self.line_spectrum.set_data(freqs, magnitude)
         self.ax_spectrum.set_xlim(0, 5000)
         self.ax_spectrum.set_ylim(0, np.max(magnitude) + 100)
 
-        # === Clear visual overlays ===
+        # Clear old highlights
         for artist in list(self.ax_spectrum.artists) + list(self.ax_spectrum.patches):
             artist.remove()
 
-        # === Frequency Bands ===
-        freq_bands = [
-            (136.1, 136.1, "🧘 OM (C#3) 3rd Eye (6th)", 'purple'),
+        # Detect peaks
+        peaks = detect_peaks(freqs, magnitude, threshold_multiplier=self.filter_strength_multiplier)
 
-            (172, 172, "172Hz – Inner Balance / Spleen Meridian", 'blue'),
-            (215, 215, "215Hz – Emotional Clearing / Regeneration", 'skyblue'),
-            (285, 285, "285Hz – Tissue Healing / Restoration", 'turquoise'),
-
-            (396, 396, "Solfeggio 396Hz Root Chakra (1st)", 'orange'),
-            (417, 417, "Solfeggio 417Hz Sacral Chakra (2nd)", 'orange'),
-            (432, 432, "Solfeggio 432Hz Heart Chakra (4th)", 'orange'),
-            (528, 528, "Solfeggio 528Hz Solar Plexus Chakra (3rd)", 'green'),
-            (741, 741, "Solfeggio 741Hz Throat Chakra (5th)", 'cyan'),
-            (963, 963, "Solfeggio 963Hz Crown Chakra (7th)", 'violet'),
-
-            (4, 8, "Theta", 'lightgreen'),
-            (8, 12, "Alpha", 'lightpink'),
-
-            (0.1, 4, "⚠ Sub-Delta (disorienting)", 'red'),
-            (18, 20, "⚠ Fear/Infrasound", 'darkred'),
-            (70, 90, "⚠ Agitation Band", 'tomato'),
-            (666, 666, "⚠ 666Hz (symbolic)", 'black'),
-        ]
-
-        # === Draw Labels ===
-        for start, end, label, color in freq_bands:
-            self.ax_spectrum.axvspan(start, end if end != start else start + 5, color=color, alpha=0.3, label=label)
-
-        # === Peak Detection ===
-        threshold_ratio = 5
-        window_size = 3
-        active_alerts = set()
-
-        if hasattr(self, 'alert_text'):  # Safe check
-            self.alert_text.configure(state='normal')
-            # self.alert_text.insert('end', f"\nFrame {frame}:\n")
-            self.alert_text.tag_config("highlight", foreground="red", font=("Helvetica", 10, "bold"))
-
-        for i in range(3, len(magnitude) - 3):
-            local_avg = np.mean(magnitude[i - 3:i + 4])
-            if magnitude[i] > local_avg * self.filter_strength_multiplier:
-                # This is a peak of interest
-                peak_freq = freqs[i]
-                peak_mag = magnitude[i]
-                # Check which frequency band (if any) the peak belongs to
-                band_label = None
-                for start, end, label, _ in freq_bands:
-                    if start <= peak_freq <= end if start != end else abs(peak_freq - start) < 3:
-                        band_label = label
-                        break
-
-                # Construct enhanced alert message
-                if band_label:
-                    alert_msg = f"{band_label} → {peak_freq:.1f} Hz (Mag: {peak_mag:.0f})"
-                else:
-                    alert_msg = f"Peak: {peak_freq:.1f} Hz (Mag: {peak_mag:.0f})"
-
-                if alert_msg not in active_alerts:
-                    if hasattr(self, 'alert_text'):
-                        self.alert_text.insert('end', f"  {alert_msg}\n", ("highlight" if "⚠️" in alert_msg else ""))
-                    self.ax_spectrum.plot(peak_freq, peak_mag, 'ro' if "⚠️" in alert_msg else 'go')
-                    active_alerts.add(alert_msg)
-
-                log_alert_to_file(peak_freq, peak_mag, band_label)
-
-                if hasattr(self, 'alert_text'):
-                    self.alert_text.see('end')
-                    self.alert_text.configure(state='disabled')
-
-                # === Clean Legend ===
-                handles, labels = self.ax_spectrum.get_legend_handles_labels()
-                seen = set()
-                new_handles, new_labels = [], []
-                for h, l in zip(handles, labels):
-                    if l not in seen:
-                        seen.add(l)
-                        new_handles.append(h)
-                        new_labels.append(l)
-                self.ax_spectrum.legend(new_handles, new_labels, fontsize='x-small', loc='upper right')
-
-                # === Real-Time Frequency Alerting ===
-                threshold = np.max(magnitude) * 0.6 if np.max(magnitude) > 0 else 1000
-                detected_peaks = [(freqs[i], magnitude[i]) for i in range(len(freqs)) if magnitude[i] > threshold]
-
-                for freq_val, mag in detected_peaks:
-                    for start, end, label, color in freq_bands:
-                        if start <= freq_val <= (end if end != start else start + 5):
-                            # Print to console or redirect to GUI alert box
-                            self.alert_log(alert_msg, color)
-                            # Draw vertical flashing line
-                            self.ax_spectrum.axvline(freq_val, color=color, linestyle='--', alpha=0.8)
+        for freq_val, mag, label, color in peaks:
+            alert_msg = f"{label or 'Peak'}: {freq_val:.1f} Hz (Mag: {mag:.0f})"
+            log_alert_to_file(freq_val, mag, label)
+            log_alert_to_gui(self.alert_text, alert_msg, color or "white")
+            self.ax_spectrum.plot(freq_val, mag, 'ro' if "⚠" in (label or "") else 'go')
+            self.ax_spectrum.axvline(freq_val, color=color or 'white', linestyle='--', alpha=0.8)
 
         return self.line_waveform, self.line_spectrum
 
