@@ -1,0 +1,86 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+env/
+venv/
+ENV/
+.venv/
+pip-log.txt
+*.log
+*.sqlite3
+*.db
+*.dat
+*.tmp
+
+# === Jupyter / IPython (if used) ===
+.ipynb_checkpoints
+
+# === OS Files ===
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+desktop.ini
+
+# === IDEs ===
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# === Matplotlib / Tkinter Cache ===
+.matplotlib/
+
+# === Android Build Artifacts ===
+*.apk
+*.ap_
+android/.gradle/
+android/.idea/
+android/local.properties
+android/.cxx/
+android/build/
+android/app/build/
+android/key.properties
+*.keystore
+
+# === Flutter (in case of partial migration) ===
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+build/
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+flutter_export_environment.sh
+
+# === Logs / Output Files ===
+*.log
+frequency_alerts.log
+
+# === Test Artifacts ===
+coverage/
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+.cache/
+
+# === Backup / Temp ===
+*~
+*.bak
+*.swp
+*.tmp
+
+# === Git Credentials (if used with git-credential-store) ===
+.git-credentials
