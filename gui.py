@@ -34,6 +34,19 @@ def build_gui(root, fig, start_callback, stop_callback):
     decrease_btn = ttk.Button(filter_frame, text="▼", width=3)
     decrease_btn.grid(row=0, column=3)
 
+    # === Frequency Counter Frame ===
+    counter_frame = ttk.LabelFrame(root, text="Frequency Detection Count", padding=10)
+    counter_frame.grid(row=5, column=3, sticky='we', padx=10)
+
+    counter_labels = {}  # Dictionary to store labels for dynamic updating
+
+    from config import CHAKRA_FREQUENCY_BANDS
+    for idx, (_, _, label, color) in enumerate(CHAKRA_FREQUENCY_BANDS):
+        text_var = tk.StringVar(value=f"{label}: 0")
+        lbl = ttk.Label(counter_frame, textvariable=text_var, foreground=color)
+        lbl.grid(row=idx // 2, column=idx % 2, sticky='w', padx=5, pady=2)
+        counter_labels[label] = text_var
+
     # === Checkbox: Alert Mode ===
     alert_var = tk.BooleanVar()
     alert_checkbox = tk.Checkbutton(root, text="Alert Mode", variable=alert_var)
@@ -44,9 +57,6 @@ def build_gui(root, fig, start_callback, stop_callback):
     status_label.grid(row=3, column=0, columnspan=2, padx=10, pady=0)
 
     # === Log Box ===
-    log_label = tk.Label(root, text="Log:")
-    log_label.grid(row=4, column=0, padx=10, pady=5)
-
     log_text = tk.Text(root, height=10, width=50, wrap=tk.WORD)
     log_text.grid(row=5, column=0, columnspan=2, padx=10, pady=10)
     log_text.config(state=tk.DISABLED)
@@ -73,4 +83,5 @@ def build_gui(root, fig, start_callback, stop_callback):
         "increase_btn": increase_btn,
         "decrease_btn": decrease_btn,
         "canvas": canvas,
+        "counter_labels": counter_labels
     }
