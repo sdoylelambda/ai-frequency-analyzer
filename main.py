@@ -36,6 +36,10 @@ class AudioVisualizerApp:
             self.stop_visualization
         )
 
+        # Frequency Counter List
+        self.counter_labels = self.widgets["counter_labels"]
+        self.frequency_counts = {label: 0 for _, _, label, _ in CHAKRA_FREQUENCY_BANDS}
+
         # Wire up widget references
         self.alert_var = self.widgets["alert_var"]
         self.log_text = self.widgets["log_text"]
@@ -122,6 +126,10 @@ class AudioVisualizerApp:
             log_alert_to_gui(self.alert_text, alert_msg, color or "white")
             self.ax_spectrum.plot(freq, mag, 'ro' if "⚠" in (label or "") else 'go')
             self.ax_spectrum.axvline(freq, color=color or 'white', linestyle='--', alpha=0.8)
+            # Update Frequency Counter
+            if label:
+                self.frequency_counts[label] += 1
+                self.counter_labels[label].set(f"{label}: {self.frequency_counts[label]}")
 
         return self.line_waveform, self.line_spectrum
 
