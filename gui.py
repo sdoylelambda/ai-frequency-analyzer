@@ -1,26 +1,47 @@
-# gui.py
-
 import tkinter as tk
 from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
+from config import CHAKRA_FREQUENCY_BANDS
+from collections import defaultdict
+from alert_system import match_frequency_to_band
+
+
+def update_frequency_count(self, freq):
+    label, color = match_frequency_to_band(freq)
+    if label:
+        self.frequency_counts[label] += 1
+        self.update_frequency_counter_display()
+
+
+def update_frequency_counter_display(self):
+    self.counter_text.config(state='normal')
+    self.counter_text.delete('1.0', tk.END)
+    self.counter_text.insert(tk.END, "🔢 Frequency Detection Counts:\n")
+    for label, count in sorted(self.frequency_counts.items(), key=lambda x: -x[1]):
+        self.counter_text.insert(tk.END, f"{label}: {count}\n")
+    self.counter_text.config(state='disabled')
 
 
 def build_gui(root, fig, start_callback, stop_callback):
     """Builds the full Tkinter + Matplotlib GUI and returns widgets as a dict."""
 
+    # === Calibration Button ===
+    calibrate_button = ttk.Button(root, text="Calibrate in Silence")
+    calibrate_button.grid(row=0, column=0, columnspan=2, padx=10, pady=(0, 10))
+
     # === Buttons ===
     start_button = tk.Button(root, text="Start Visualization", command=start_callback)
-    start_button.grid(row=0, column=0, padx=10, pady=5)
+    start_button.grid(row=0, column=1, padx=10, pady=5)
 
     stop_button = tk.Button(root, text="Stop Visualization", command=stop_callback)
-    stop_button.grid(row=0, column=1, padx=10, pady=5)
+    stop_button.grid(row=0, column=2, padx=10, pady=5)
 
     # === Filter Strength Controls ===
     filter_frame = ttk.LabelFrame(root, text="Filter Sensitivity", padding=10)
-    filter_frame.grid(row=0, column=3, sticky='w', padx=10, pady=5)
+    filter_frame.grid(row=0, column=4, sticky='w', padx=10, pady=5)
 
-    filter_strength_var = tk.IntVar(value=3)
+    filter_strength_var = tk.IntVar(value=10)
     filter_label = ttk.Label(filter_frame, text="Strength:")
     filter_label.grid(row=0, column=0)
 
@@ -35,17 +56,38 @@ def build_gui(root, fig, start_callback, stop_callback):
     decrease_btn.grid(row=0, column=3)
 
     # === Frequency Counter Frame ===
+    # counter_frame = ttk.LabelFrame(root, text="Frequency Detection Count", padding=10)
+    # counter_frame.grid(row=5, column=3, sticky='we', padx=10)
+    #
+    # counter_vars = defaultdict(lambda: tk.StringVar(value=""))
     counter_frame = ttk.LabelFrame(root, text="Frequency Detection Count", padding=10)
     counter_frame.grid(row=5, column=3, sticky='we', padx=10)
 
-    counter_labels = {}  # Dictionary to store labels for dynamic updating
+    counter_labels = {}
+    frequency_counts = {}
+    counter_vars = {}
 
-    from config import CHAKRA_FREQUENCY_BANDS
-    for idx, (_, _, label, color) in enumerate(CHAKRA_FREQUENCY_BANDS):
-        text_var = tk.StringVar(value=f"{label}: 0")
-        lbl = ttk.Label(counter_frame, textvariable=text_var, foreground=color)
+    # Only one counter per unique frequency label
+    unique_labels = list({label: color for _, _, label, color in CHAKRA_FREQUENCY_BANDS}.items())
+    for idx, (label, color) in enumerate(unique_labels):
+        frequency_counts[label] = 0
+        var = tk.StringVar(value=f"{label}: 0")
+        counter_vars[label] = var
+        lbl = ttk.Label(counter_frame, textvariable=var, foreground=color)
         lbl.grid(row=idx // 2, column=idx % 2, sticky='w', padx=5, pady=2)
-        counter_labels[label] = text_var
+        counter_labels[label] = lbl
+    #
+    # # Build unique set of chakra labels for frequency counting
+    # unique_labels = list({label: color for _, _, label, color in CHAKRA_FREQUENCY_BANDS}.items())
+    # counter_frame = ttk.LabelFrame(root, text="Frequency Detection Count", padding=10)
+    # counter_frame.grid(row=5, column=3, sticky='we', padx=10, pady=10)
+    # frequency_counts = {}
+    #
+    # for idx, (label, color) in enumerate(unique_labels):
+    #     frequency_counts[label] = 0
+    #     counter_vars[label] = tk.StringVar(value=f"{label}: 0")
+    #     lbl = ttk.Label(counter_frame, textvariable=counter_vars[label], foreground=color)
+    #     lbl.grid(row=idx // 2, column=idx % 2, sticky='w', padx=5, pady=2)
 
     # === Checkbox: Alert Mode ===
     alert_var = tk.BooleanVar()
@@ -83,5 +125,9 @@ def build_gui(root, fig, start_callback, stop_callback):
         "increase_btn": increase_btn,
         "decrease_btn": decrease_btn,
         "canvas": canvas,
-        "counter_labels": counter_labels
+        "counter_labels": counter_vars,
+        "calibrate_button": calibrate_button,
+        "counter_vars": counter_vars,
+        "frequency_counts": frequency_counts
     }
+

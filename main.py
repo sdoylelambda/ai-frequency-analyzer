@@ -1,8 +1,7 @@
-# main.py
-
 import tkinter as tk
 import numpy as np
 import matplotlib.pyplot as plt
+from tkinter import ttk
 
 from audio_stream import AudioStream
 from fft_processor import compute_fft, detect_peaks
@@ -10,6 +9,7 @@ from alert_system import log_alert_to_file, log_alert_to_gui
 from logger import log_to_gui, log_to_console
 from gui import build_gui
 from config import SAMPLE_RATE, FRAME_SIZE, CHAKRA_FREQUENCY_BANDS
+from collections import defaultdict
 
 
 class AudioVisualizerApp:
@@ -20,7 +20,7 @@ class AudioVisualizerApp:
         self.audio = AudioStream()
         self.data_buffer = np.zeros(FRAME_SIZE)
         self.is_running = False
-        self.filter_strength_multiplier = 3
+        self.filter_strength_multiplier = 10
 
         # Matplotlib Setup
         self.fig, (self.ax_waveform, self.ax_spectrum) = plt.subplots(2, 1, figsize=(10, 10))
@@ -37,8 +37,27 @@ class AudioVisualizerApp:
         )
 
         # Frequency Counter List
-        self.counter_labels = self.widgets["counter_labels"]
-        self.frequency_counts = {label: 0 for _, _, label, _ in CHAKRA_FREQUENCY_BANDS}
+        self.frequency_counts = self.widgets["frequency_counts"]
+        self.counter_vars = self.widgets["counter_vars"]
+        self.calibrated = False  # Block frequency counts until calibration
+
+        # self.counter_labels = self.widgets["counter_labels"]
+        # self.frequency_counts = {label: 0 for _, _, label, _ in CHAKRA_FREQUENCY_BANDS}
+        # self.frequency_counts = defaultdict(int)
+        # self.counter_vars = defaultdict(lambda: tk.StringVar(value=""))
+        # unique_labels = list({label: color for _, _, label, color in CHAKRA_FREQUENCY_BANDS}.items())
+        #
+        # self.frequency_counts = {}
+        # self.counter_vars = {}
+        #
+        # counter_frame = ttk.LabelFrame(self.root, text="Frequency Detection Count", padding=10)
+        # counter_frame.grid(row=5, column=3, sticky='we', padx=10, pady=10)
+        #
+        # for idx, (label, color) in enumerate(unique_labels):
+        #     self.frequency_counts[label] = 0
+        #     self.counter_vars[label] = tk.StringVar(value=f"{label}: 0")
+        #     lbl = ttk.Label(counter_frame, textvariable=self.counter_vars[label], foreground=color)
+        #     lbl.grid(row=idx // 2, column=idx % 2, sticky='w', padx=5, pady=2)
 
         # Wire up widget references
         self.alert_var = self.widgets["alert_var"]
@@ -49,6 +68,32 @@ class AudioVisualizerApp:
 
         self.widgets["increase_btn"].config(command=self.increase_filter_strength)
         self.widgets["decrease_btn"].config(command=self.decrease_filter_strength)
+
+        self.widgets["calibrate_button"].config(command=self.calibrate_silence)
+        self.baseline_fft = None
+
+    def calibrate_silence(self):
+        log_to_gui(self.log_text, "Calibrating... Please stay silent.")
+
+        collected_mags = []
+
+        def collect_frame():
+            try:
+                data = self.audio.read_data()
+                freqs, mag = compute_fft(data)
+                collected_mags.append(mag)
+                if len(collected_mags) < 30:  # ~1 second if 30ms intervals
+                    self.root.after(30, collect_frame)
+                else:
+                    self.baseline_fft = np.mean(collected_mags, axis=0)
+                    log_to_gui(self.log_text, "✅ Baseline noise profile calibrated.")
+            except Exception as e:
+                log_to_gui(self.log_text, f"Calibration failed: {e}")
+
+        self.root.after(100, collect_frame)
+        self.baseline_fft = np.mean(collected_mags, axis=0)
+        self.calibrated = True  # ✅ Unlock frequency counting
+        log_to_gui(self.log_text, "✅ Baseline noise profile calibrated.")
 
     def increase_filter_strength(self):
         self.filter_strength_multiplier += 1
@@ -110,7 +155,10 @@ class AudioVisualizerApp:
         self.ax_waveform.set_xlim(0, len(self.data_buffer))
 
         freqs, magnitude = compute_fft(self.data_buffer)
-        self.line_spectrum.set_data(freqs, magnitude)
+        adjusted_mag = magnitude
+        if self.baseline_fft is not None:
+            adjusted_mag = np.clip(magnitude - self.baseline_fft, 0, None)
+        self.line_spectrum.set_data(freqs, adjusted_mag)
         self.ax_spectrum.set_xlim(0, 5000)
         self.ax_spectrum.set_ylim(0, np.max(magnitude) + 100)
 
@@ -119,17 +167,26 @@ class AudioVisualizerApp:
             artist.remove()
 
         # Detect and render peaks
-        peaks = detect_peaks(freqs, magnitude, threshold_multiplier=self.filter_strength_multiplier)
+        peaks = detect_peaks(freqs, adjusted_mag, threshold_multiplier=self.filter_strength_multiplier)
         for freq, mag, label, color in peaks:
             alert_msg = f"{label or 'Peak'}: {freq:.1f} Hz (Mag: {mag:.0f})"
             log_alert_to_file(freq, mag, label)
             log_alert_to_gui(self.alert_text, alert_msg, color or "white")
             self.ax_spectrum.plot(freq, mag, 'ro' if "⚠" in (label or "") else 'go')
             self.ax_spectrum.axvline(freq, color=color or 'white', linestyle='--', alpha=0.8)
-            # Update Frequency Counter
-            if label:
+
+            # 🧠 Update frequency count once per label (ignoring harmonics)
+            if self.calibrated and label in self.frequency_counts:
+                # ✅ Increment base frequency count (no matter the harmonic)
                 self.frequency_counts[label] += 1
-                self.counter_labels[label].set(f"{label}: {self.frequency_counts[label]}")
+                self.counter_vars[label].set(f"{label}: {self.frequency_counts[label]}")
+
+            # Log alerts and draw
+            alert_msg = f"{label or 'Peak'}: {freq:.1f} Hz (Mag: {mag:.0f})"
+            log_alert_to_file(freq, mag, label)
+            log_alert_to_gui(self.alert_text, alert_msg, color or "white")
+            self.ax_spectrum.plot(freq, mag, 'ro' if "⚠" in (label or "") else 'go')
+            self.ax_spectrum.axvline(freq, color=color or 'white', linestyle='--', alpha=0.8)
 
         return self.line_waveform, self.line_spectrum
 
