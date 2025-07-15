@@ -29,12 +29,36 @@ from config import CHAKRA_FREQUENCY_BANDS
 #             return label, color
 #     return None, None
 
-def match_frequency_to_band(freq, bands=CHAKRA_FREQUENCY_BANDS):
+# def match_frequency_to_band(freq, bands=CHAKRA_FREQUENCY_BANDS):
+#     for start, end, label, color in bands:
+#         center = (start + end) / 2
+#         tolerance = center * 0.02  # 2% range
+#         if abs(freq - center) <= tolerance:
+#             return label, color
+#     return None, None
+
+def match_frequency_to_band(freq, bands=CHAKRA_FREQUENCY_BANDS, global_tolerance=0.02, debug=False):
+    closest = None
+    min_diff = float('inf')
+
     for start, end, label, color in bands:
+        if not (start < end):
+            continue
+
         center = (start + end) / 2
-        tolerance = center * 0.02  # 2% range
-        if abs(freq - center) <= tolerance:
+        tolerance = global_tolerance * center
+
+        diff = abs(freq - center)
+        if diff <= tolerance:
             return label, color
+        if diff < min_diff:
+            closest = (label, center, diff)
+            min_diff = diff
+
+    if debug and closest:
+        label, center, diff = closest
+        print(f"[DEBUG] Closest band: {label} (center {center:.1f} Hz), diff: {diff:.2f} Hz")
+
     return None, None
 
 
