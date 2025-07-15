@@ -1,7 +1,7 @@
 import tkinter as tk
 import numpy as np
 import matplotlib.pyplot as plt
-from tkinter import ttk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from audio_stream import AudioStream
 from fft_processor import compute_fft, detect_peaks
@@ -9,31 +9,48 @@ from alert_system import log_alert_to_file, log_alert_to_gui
 from logger import log_to_gui, log_to_console
 from gui import build_gui
 from config import SAMPLE_RATE, FRAME_SIZE, CHAKRA_FREQUENCY_BANDS
-from collections import defaultdict
 
 
 class AudioVisualizerApp:
     def __init__(self, root):
+        self.anim = None
+        self.calibration_in_progress = False
         self.root = root
         self.root.title("Cymatics Frequency Analyzer")
 
         self.audio = AudioStream()
         self.data_buffer = np.zeros(FRAME_SIZE)
+        self.sample_rate = 44100
         self.is_running = False
         self.filter_strength_multiplier = 10
 
-        # Matplotlib Setup
+        # --- Create a master frame to organize layout ---
+        self.main_frame = tk.Frame(self.root)
+        self.main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Matplotlib Setup inside a separate frame
+        plot_frame = tk.Frame(self.main_frame)
+        plot_frame.pack(fill=tk.BOTH, expand=True)
+
         self.fig, (self.ax_waveform, self.ax_spectrum) = plt.subplots(2, 1, figsize=(10, 10))
         self.fig.tight_layout(pad=3.0)
         self.line_waveform, = self.ax_waveform.plot([], [], lw=2)
         self.line_spectrum, = self.ax_spectrum.plot([], [], lw=2)
 
-        # Build GUI
+        self.canvas = FigureCanvasTkAgg(self.fig, master=plot_frame)
+        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        self.canvas.draw()
+
+        # Build GUI inside a separate subframe (for buttons, etc.)
+        control_frame = tk.Frame(self.main_frame)
+        control_frame.pack(fill=tk.X)
+
         self.widgets = build_gui(
-            self.root,
+            control_frame,  # ✅ NOT root
             self.fig,
             self.start_visualization,
-            self.stop_visualization
+            self.stop_visualization,
+            self.calibrate_silence
         )
 
         # Frequency Counter List
@@ -41,30 +58,15 @@ class AudioVisualizerApp:
         self.counter_vars = self.widgets["counter_vars"]
         self.calibrated = False  # Block frequency counts until calibration
 
-        # self.counter_labels = self.widgets["counter_labels"]
-        # self.frequency_counts = {label: 0 for _, _, label, _ in CHAKRA_FREQUENCY_BANDS}
-        # self.frequency_counts = defaultdict(int)
-        # self.counter_vars = defaultdict(lambda: tk.StringVar(value=""))
-        # unique_labels = list({label: color for _, _, label, color in CHAKRA_FREQUENCY_BANDS}.items())
-        #
-        # self.frequency_counts = {}
-        # self.counter_vars = {}
-        #
-        # counter_frame = ttk.LabelFrame(self.root, text="Frequency Detection Count", padding=10)
-        # counter_frame.grid(row=5, column=3, sticky='we', padx=10, pady=10)
-        #
-        # for idx, (label, color) in enumerate(unique_labels):
-        #     self.frequency_counts[label] = 0
-        #     self.counter_vars[label] = tk.StringVar(value=f"{label}: 0")
-        #     lbl = ttk.Label(counter_frame, textvariable=self.counter_vars[label], foreground=color)
-        #     lbl.grid(row=idx // 2, column=idx % 2, sticky='w', padx=5, pady=2)
-
         # Wire up widget references
         self.alert_var = self.widgets["alert_var"]
         self.log_text = self.widgets["log_text"]
         self.status_label = self.widgets["status_label"]
         self.alert_text = self.widgets["alert_text"]
         self.filter_strength_var = self.widgets["filter_strength_var"]
+        self.calibrate_button = self.widgets.get("calibrate_button")
+        self.calibrate_button.config(state='disabled')  # prevent calibration before stream
+        self.calibrate_button.config(command=self.calibrate_silence)  # Correct command binding
 
         self.widgets["increase_btn"].config(command=self.increase_filter_strength)
         self.widgets["decrease_btn"].config(command=self.decrease_filter_strength)
@@ -73,27 +75,56 @@ class AudioVisualizerApp:
         self.baseline_fft = None
 
     def calibrate_silence(self):
-        log_to_gui(self.log_text, "Calibrating... Please stay silent.")
+        if getattr(self, "calibration_in_progress", False):
+            print("⚠️ Calibration already running, skipping.")
+            return
 
+        print("🛠 calibrate_silence triggered")
+        self.calibration_in_progress = True
+        self.calibrated = False
+
+        if self.calibrate_button:
+            self.calibrate_button.config(state='disabled')
+
+        log_to_gui(self.log_text, "Calibrating... Please stay silent.")
         collected_mags = []
 
-        def collect_frame():
+        def collect_frame(frame_number=1):
             try:
                 data = self.audio.read_data()
-                freqs, mag = compute_fft(data)
-                collected_mags.append(mag)
-                if len(collected_mags) < 30:  # ~1 second if 30ms intervals
-                    self.root.after(30, collect_frame)
+                freqs, magnitude = compute_fft(data, self.sample_rate)
+                print("📡 got audio data")
+                print("🎯 collected magnitude shape:", magnitude.shape)
+                collected_mags.append(magnitude)
+
+                log_to_gui(self.log_text, f"[{frame_number}/30]")
+
+                if frame_number < 30:
+                    self.root.after(30, lambda: collect_frame(frame_number + 1))
                 else:
                     self.baseline_fft = np.mean(collected_mags, axis=0)
-                    log_to_gui(self.log_text, "✅ Baseline noise profile calibrated.")
+                    print("✅ finish_calibration triggered (step 1/2)")
+                    log_to_gui(self.log_text, "✅ Calibration complete. Stabilizing...")
+
+                    self.root.after(1000, self.finish_calibration)
+
             except Exception as e:
                 log_to_gui(self.log_text, f"Calibration failed: {e}")
+                self.baseline_fft = None
+                self.calibrated = False
+                self.calibration_in_progress = False
+                if self.calibrate_button:
+                    self.calibrate_button.config(state='normal')
 
-        self.root.after(100, collect_frame)
-        self.baseline_fft = np.mean(collected_mags, axis=0)
-        self.calibrated = True  # ✅ Unlock frequency counting
-        log_to_gui(self.log_text, "✅ Baseline noise profile calibrated.")
+        self.root.after(100, lambda: collect_frame(1))
+
+    def finish_calibration(self):
+        print("✅ finish_calibration triggered (step 2/2)")
+        self.calibrated = True
+        self.calibration_in_progress = False
+        if self.calibrate_button:
+            self.calibrate_button.config(state='normal')
+        log_to_gui(self.log_text, "✅ Baseline noise profile calibrated. Detection resumed.")
 
     def increase_filter_strength(self):
         self.filter_strength_multiplier += 1
@@ -107,6 +138,8 @@ class AudioVisualizerApp:
     def start_visualization(self):
         try:
             self.audio.open_stream()
+            self.calibrate_button.config(state='normal')
+            print("✅ stream is open")
         except RuntimeError as e:
             log_to_gui(self.log_text, f"Error: {e}")
             return
@@ -127,7 +160,7 @@ class AudioVisualizerApp:
         self.ani = animation.FuncAnimation(
             self.fig,
             self.update_line,
-            blit=True,
+            blit=False,
             cache_frame_data=False,
             interval=30
         )
@@ -149,44 +182,57 @@ class AudioVisualizerApp:
         self.root.after(10, self.read_audio_data)
 
     def update_line(self, frame):
+        print(f"[update_line] frame {frame}")
+        try:
+            self.data_buffer = self.audio.read_data()
+        except Exception as e:
+            log_to_gui(self.log_text, f"⚠️ Audio read failed: {e}")
+            return self.line_waveform, self.line_spectrum
+
+        # Waveform view
         self.line_waveform.set_ydata(self.data_buffer)
         self.line_waveform.set_xdata(np.arange(len(self.data_buffer)))
         self.ax_waveform.set_ylim(-4000, 4000)
         self.ax_waveform.set_xlim(0, len(self.data_buffer))
 
-        freqs, magnitude = compute_fft(self.data_buffer)
+        # FFT + adjustment
+        freqs, magnitude = compute_fft(self.data_buffer, self.sample_rate)
         adjusted_mag = magnitude
         if self.baseline_fft is not None:
             adjusted_mag = np.clip(magnitude - self.baseline_fft, 0, None)
-        self.line_spectrum.set_data(freqs, adjusted_mag)
-        self.ax_spectrum.set_xlim(0, 5000)
-        self.ax_spectrum.set_ylim(0, np.max(magnitude) + 100)
 
-        # Clear old visuals
+        # Clear and redraw spectrum
+        self.ax_spectrum.cla()
+        self.ax_spectrum.set_xlim(0, 5000)
+        self.ax_spectrum.set_ylim(0, np.max(adjusted_mag) + 100)
+        self.ax_spectrum.set_title("Frequency Spectrum")
+        self.ax_spectrum.set_xlabel("Frequency (Hz)")
+        self.ax_spectrum.set_ylabel("Magnitude")
+
+        # Re-plot spectrum
+        self.line_spectrum, = self.ax_spectrum.plot(freqs, adjusted_mag, color='cyan')
+
+        # Clear and draw alerts
         for artist in list(self.ax_spectrum.artists) + list(self.ax_spectrum.patches):
             artist.remove()
 
-        # Detect and render peaks
         peaks = detect_peaks(freqs, adjusted_mag, threshold_multiplier=self.filter_strength_multiplier)
         for freq, mag, label, color in peaks:
-            alert_msg = f"{label or 'Peak'}: {freq:.1f} Hz (Mag: {mag:.0f})"
-            log_alert_to_file(freq, mag, label)
-            log_alert_to_gui(self.alert_text, alert_msg, color or "white")
-            self.ax_spectrum.plot(freq, mag, 'ro' if "⚠" in (label or "") else 'go')
-            self.ax_spectrum.axvline(freq, color=color or 'white', linestyle='--', alpha=0.8)
+            if label:
+                log_alert_to_file(freq, mag, label)
+                log_alert_to_gui(self.alert_text, f"{label or 'Peak'}: {freq:.1f} Hz (Mag: {mag:.0f})",
+                                 color or "white")
+                self.ax_spectrum.plot(freq, mag, 'ro' if "⚠" in label else 'go')
+                self.ax_spectrum.axvline(freq, color=color or 'white', linestyle='--', alpha=0.8)
 
-            # 🧠 Update frequency count once per label (ignoring harmonics)
-            if self.calibrated and label in self.frequency_counts:
-                # ✅ Increment base frequency count (no matter the harmonic)
-                self.frequency_counts[label] += 1
-                self.counter_vars[label].set(f"{label}: {self.frequency_counts[label]}")
+                if self.calibrated and label in self.frequency_counts:
+                    self.frequency_counts[label] += 1
+                    self.counter_vars[label].set(f"{label}: {self.frequency_counts[label]}")
 
-            # Log alerts and draw
-            alert_msg = f"{label or 'Peak'}: {freq:.1f} Hz (Mag: {mag:.0f})"
-            log_alert_to_file(freq, mag, label)
-            log_alert_to_gui(self.alert_text, alert_msg, color or "white")
-            self.ax_spectrum.plot(freq, mag, 'ro' if "⚠" in (label or "") else 'go')
-            self.ax_spectrum.axvline(freq, color=color or 'white', linestyle='--', alpha=0.8)
+        # ✅ Force GUI to update
+        if self.canvas:
+            self.canvas.draw_idle()
+            print("Canvas draw idle successful")
 
         return self.line_waveform, self.line_spectrum
 

@@ -31,10 +31,10 @@ from config import CHAKRA_FREQUENCY_BANDS
 
 def match_frequency_to_band(freq, bands=CHAKRA_FREQUENCY_BANDS):
     for start, end, label, color in bands:
-        if start <= freq <= end:
-            # Strip off any "(Harmonic xN)" in label
-            base_label = label.split(" (Harmonic")[0]
-            return base_label, color
+        center = (start + end) / 2
+        tolerance = center * 0.02  # 2% range
+        if abs(freq - center) <= tolerance:
+            return label, color
     return None, None
 
 
