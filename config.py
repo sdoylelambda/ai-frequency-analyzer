@@ -1,7 +1,7 @@
 # config.py
 
 SAMPLE_RATE = 44100
-FRAME_SIZE = 1024
+FRAME_SIZE = 16384  # or 16384 or 1024 or 8192
 FILTER_STRENGTH_DEFAULT = 5
 
 CHAKRA_FREQUENCY_BANDS = []
@@ -54,18 +54,18 @@ CHAKRA_FREQUENCY_BANDS = []
 
 # Narrow Range Detection (+-2) except first 3
 base_bands = [
-    (135.7, 136.5, "136.1 - OM (C#3) 3rd Eye (6th)", 'purple'),
+    (135.4, 136.8, "136.1 - OM (C#3) 3rd Eye (6th)", 'purple'),
 
     (171.7, 172.3, "172Hz – Inner Balance / Spleen Meridian", 'blue'),
-    (214.7, 215.3, "215Hz – Emotional Clearing / Regeneration", 'skyblue'),
-    (278, 292, "285Hz – Tissue Healing / Restoration", 'turquoise'),
+    (214.6, 215.4, "215Hz – Emotional Clearing / Regeneration", 'skyblue'),
+    (275, 295, "285Hz – Tissue Healing / Restoration", 'turquoise'),
 
-    (383, 409, "Solfeggio 396Hz Root Chakra (1st)", 'black'),
-    (403, 434, "Solfeggio 417Hz Sacral Chakra (2nd)", 'red'),
-    (415, 448, "Solfeggio 432Hz Heart Chakra (4th)", 'orange'),
+    (382, 408, "Solfeggio 396Hz Root Chakra (1st)", 'black'),
+    (402, 433, "Solfeggio 417Hz Sacral Chakra (2nd)", 'red'),
+    (411, 452, "Solfeggio 432Hz Heart Chakra (4th)", 'orange'),
     (513, 543, "Solfeggio 528Hz Solar Plexus Chakra (3rd)", 'green'),
     (730, 752, "Solfeggio 741Hz Throat Chakra (5th)", 'cyan'),
-    (938, 988, "Solfeggio 963Hz Crown Chakra (7th)", 'violet'),
+    (936, 990, "Solfeggio 963Hz Crown Chakra (7th)", 'violet'),
 ]
 
 # NEW FREQUENCIES TO ADD === 888,1111   +   LIST AT BOTTOM OF PAGE (NEGATIVE, ALPHA, DETA, THETA, ETC.)
@@ -105,26 +105,26 @@ base_bands = [
 #     (666, 666, "⚠ 666Hz (symbolic)", 'black'),
 # ]
 
+# CHECK MORE HARMONICS FOR SAME FREQ
+# def generate_harmonics(base_band, max_freq=10000):
+#     start, end, label, color = base_band
+#     harmonics = []
+#     base_center = (start + end) / 2
+#     multiplier = 2
+#     while (base_center * multiplier) < max_freq:
+#         new_start = start * multiplier
+#         new_end = end * multiplier
+#         log_label = f"{label} (Harmonic x{multiplier})"
+#         new_label = label
+#         harmonics.append((new_start, new_end, new_label, color))
+#         multiplier += 1
+#     return harmonics
 
-def generate_harmonics(base_band, max_freq=10000):
-    start, end, label, color = base_band
-    harmonics = []
-    base_center = (start + end) / 2
-    multiplier = 2
-    while (base_center * multiplier) < max_freq:
-        new_start = start * multiplier
-        new_end = end * multiplier
-        log_label = f"{label} (Harmonic x{multiplier})"
-        new_label = label
-        harmonics.append((new_start, new_end, new_label, color))
-        multiplier += 1
-    return harmonics
 
-
-# Include base bands and harmonics
+# Include base bands and harmonics (Commented out above)
 for band in base_bands:
     CHAKRA_FREQUENCY_BANDS.append(band)
-    CHAKRA_FREQUENCY_BANDS.extend(generate_harmonics(band))
+    # CHAKRA_FREQUENCY_BANDS.extend(generate_harmonics(band))
 
 
 

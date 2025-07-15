@@ -23,12 +23,13 @@ def update_frequency_counter_display(self):
     self.counter_text.config(state='disabled')
 
 
-def build_gui(root, fig, start_callback, stop_callback):
+def build_gui(root, fig, start_callback, stop_callback, calibrate_silence):
     """Builds the full Tkinter + Matplotlib GUI and returns widgets as a dict."""
 
     # === Calibration Button ===
-    calibrate_button = ttk.Button(root, text="Calibrate in Silence")
-    calibrate_button.grid(row=0, column=0, columnspan=2, padx=10, pady=(0, 10))
+    calibrate_button = ttk.Button(root, text="Calibrate in Silence", command=calibrate_silence)
+    calibrate_button.grid(row=0, column=3)
+    calibrate_button.config(state='normal')  # ✅ Make sure it's clickable
 
     # === Buttons ===
     start_button = tk.Button(root, text="Start Visualization", command=start_callback)

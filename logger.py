@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+
 def log_to_gui(text_widget, message):
     """Logs a message to a Tkinter Text widget (read-only)."""
     if text_widget:
