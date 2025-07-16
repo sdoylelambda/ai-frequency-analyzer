@@ -40,12 +40,12 @@ def is_harmonic(freq, base_freqs, tolerance=2.0):
 
 def get_dynamic_detection_params(center_freq: float) -> dict:
     # Reference anchors
-    min_freq = 136.1
-    max_freq = 963
-    min_tol = 1.0  # ±1 Hz at lowest freq
-    max_tol = 10.0  # ±10 Hz at 963
-    min_mag = 5000  # ~5k is typical for your detections
-    max_mag = 60000  # This keeps it tight enough to still detect 100k+ hits
+    min_freq = 134.1
+    max_freq = 973
+    min_tol = 1.5  # tighter at low freqs (172, 215)
+    max_tol = 20.0  # still generous at high freqs (741–963)
+    min_mag = 10000  # raise slightly to cut weakest noise
+    max_mag = 90000  # allow stronger signals to dominate, esp. 528+
 
     # Normalize freq (0 to 1 range)
     norm = (center_freq - min_freq) / (max_freq - min_freq)
@@ -59,12 +59,6 @@ def get_dynamic_detection_params(center_freq: float) -> dict:
         "tolerance": round(tolerance, 2),
         "mag_threshold": round(mag_threshold, 2)
     }
-
-
-# Test Values
-print('DYNAMIC TEST=============>', get_dynamic_detection_params(136.1))  # Should return something like (5.0, 2000)
-print('DYNAMIC TEST=============>', get_dynamic_detection_params(432))    # Should return mid-range
-print('DYNAMIC TEST=============>', get_dynamic_detection_params(963))    # Should return (100.0, 90000)
 
 
 def detect_peaks(freqs, magnitude, bands=CHAKRA_FREQUENCY_BANDS, debug=False):
