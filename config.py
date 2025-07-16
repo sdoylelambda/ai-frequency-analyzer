@@ -53,17 +53,20 @@ CHAKRA_FREQUENCY_BANDS = []
 # Works Well
 
 # Narrow Range Detection (+-2) except first 3
+
+# CURRENT TESTING
+
 base_bands = [
     (135.4, 136.8, "136.1 - OM (C#3) 3rd Eye (6th)", 'purple'),
 
     (171.7, 172.3, "172Hz – Inner Balance / Spleen Meridian", 'blue'),
     (214.6, 215.4, "215Hz – Emotional Clearing / Regeneration", 'skyblue'),
-    (275, 295, "285Hz – Tissue Healing / Restoration", 'turquoise'),
+    (280, 290, "285Hz – Tissue Healing / Restoration", 'turquoise'),
 
-    (382, 408, "Solfeggio 396Hz Root Chakra (1st)", 'black'),
-    (402, 433, "Solfeggio 417Hz Sacral Chakra (2nd)", 'red'),
-    (411, 452, "Solfeggio 432Hz Heart Chakra (4th)", 'orange'),
-    (513, 543, "Solfeggio 528Hz Solar Plexus Chakra (3rd)", 'green'),
+    (389, 401, "Solfeggio 396Hz Root Chakra (1st)", 'black'),
+    (407, 427, "Solfeggio 417Hz Sacral Chakra (2nd)", 'red'),
+    (421, 442, "Solfeggio 432Hz Heart Chakra (4th)", 'orange'),
+    (518, 528, "Solfeggio 528Hz Solar Plexus Chakra (3rd)", 'green'),
     (730, 752, "Solfeggio 741Hz Throat Chakra (5th)", 'cyan'),
     (936, 990, "Solfeggio 963Hz Crown Chakra (7th)", 'violet'),
 ]
