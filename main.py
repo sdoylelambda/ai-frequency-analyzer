@@ -128,7 +128,7 @@ class AudioVisualizerApp:
 
         threshold = 10000 * self.filter_strength_multiplier
 
-        for freq, mag, label, color in detect_peaks(freqs, adjusted_mag, threshold=threshold):
+        for freq, mag, label, color in detect_peaks(freqs, adjusted_mag):
             log_alert_to_file(freq, mag, label)
             log_alert_to_gui(self.alert_text, f"{label}: {freq:.1f} Hz (Mag: {mag:.0f})", color or "white")
             self.ax_spectrum.axvline(freq, color=color or "white", linestyle="--", alpha=0.8)

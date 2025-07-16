@@ -18,4 +18,4 @@ test_freqs = [136.1, 172, 215, 285, 396, 417, 432, 528, 741, 963]
 
 for freq in test_freqs:
     print(f"Playing {freq} Hz")
-    play_tone(freq=freq, duration=2.0)
+    play_tone(freq=freq, duration=5.0)
