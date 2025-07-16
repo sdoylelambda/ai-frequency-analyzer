@@ -12,7 +12,7 @@ def compute_fft(audio_buffer, sample_rate=44100):
     freqs = freqs[:len(freqs) // 2]
 
     # 🛡️ Clip huge outliers that ruin thresholds
-    magnitude = np.clip(magnitude, 20000, 500000)  # doesn't work after calibration???
+    magnitude = np.clip(magnitude, 0, 500000)
 
     return freqs, magnitude
 
@@ -37,8 +37,8 @@ def is_harmonic(freq, base_freqs, tolerance=2.0):
     return False
 
 
-def detect_peaks(freqs, magnitude, threshold_multiplier=3, threshold=10000, debug=True):
-    """Detect base frequency peaks from FFT data with harmonic suppression."""
+def detect_peaks(freqs, magnitude, threshold=10000, match_rate_threshold=0.5, debug=True):
+    """Detect base frequency peaks from FFT data with harmonic suppression and match rate gating."""
     freqs = np.asarray(freqs)
     magnitude = np.asarray(magnitude)
 
@@ -69,38 +69,42 @@ def detect_peaks(freqs, magnitude, threshold_multiplier=3, threshold=10000, debu
             print("Match rate: 0/0 (no usable data)")
         return []
 
-    # 🎯 Scan for peaks
+    # 🎯 Peak detection
     peaks = []
     matched_peaks = 0
     total_peaks = 0
-    skip_radius_hz = 8  # Don't report peaks within 8 Hz of one another
-
+    skip_radius_hz = 8
     used_freqs = []
 
-    # Sort by descending magnitude
     for freq, mag in sorted(zip(freqs, magnitude), key=lambda x: -x[1]):
         if mag < threshold:
             continue
-
-        # Skip if within `skip_radius_hz` of already accepted peak
         if any(abs(freq - used) < skip_radius_hz for used in used_freqs):
             continue
 
         total_peaks += 1
         label, color = match_frequency_to_band(freq)
-
         if label:
             matched_peaks += 1
             used_freqs.append(freq)
             peaks.append((freq, mag, label, color))
 
+    # 🔒 Match rate gating
+    if total_peaks == 0 or matched_peaks == 0:
+        match_rate = 0.0
+    else:
+        match_rate = matched_peaks / total_peaks
+
     if debug:
-        if total_peaks > 0:
-            print(f"Match rate: {matched_peaks}/{total_peaks} ({matched_peaks / total_peaks:.1%})")
-        else:
-            print("Match rate: 0/0 (no usable peaks)")
+        print(f"Match rate: {matched_peaks}/{total_peaks} ({match_rate:.1%})")
+
+    if match_rate < match_rate_threshold:
+        if debug:
+            print(f"[INFO] Match rate below threshold ({match_rate:.1%} < {match_rate_threshold:.1%}), suppressing detection.")
+        return []
 
     return peaks
+
 
 # def detect_peaks(freqs, magnitude, threshold_multiplier=5, debug=True):
 #     """Detect peaks in the frequency spectrum based on a dynamic noise floor."""
