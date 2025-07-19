@@ -56,6 +56,22 @@ CHAKRA_FREQUENCY_BANDS = []
 
 # CURRENT TESTING
 #
+base_bands = [
+    (128.1, 142.1, "136.1 - OM (C#3) 3rd Eye (6th)", 'purple'),  # TWEAK
+
+    (171.7, 172.3, "172Hz – Inner Balance / Spleen Meridian", 'blue'),
+    (214.6, 215.4, "215Hz – Emotional Clearing / Regeneration", 'skyblue'),
+    (278, 292, "285Hz – Tissue Healing / Restoration", 'turquoise'),
+
+    (386, 406, "Solfeggio 396Hz Root Chakra (1st)", 'black'),  # TWEAK
+    (407, 421.9, "Solfeggio 417Hz Sacral Chakra (2nd)", 'red'),
+    (422, 442, "Solfeggio 432Hz Heart Chakra (4th)", 'orange'),
+    (517, 529, "Solfeggio 528Hz Solar Plexus Chakra (3rd)", 'green'),
+    (721, 761, "Solfeggio 741Hz Throat Chakra (5th)", 'cyan'),
+    (936, 990, "Solfeggio 963Hz Crown Chakra (7th)", 'violet'),
+]
+
+
 # base_bands = [
 #     (134.1, 138.1, "136.1 - OM (C#3) 3rd Eye (6th)", 'purple'),  # no hits
 #
@@ -79,20 +95,20 @@ CHAKRA_FREQUENCY_BANDS = []
 
 
 # Exact Range Detection
-base_bands = [
-    (136.1, 136.1, "OM (C#3) 3rd Eye (6th)", 'purple'),
-
-    (172, 172, "172Hz – Inner Balance / Spleen Meridian", 'blue'),
-    (215, 215, "215Hz – Emotional Clearing / Regeneration", 'skyblue'),
-    (285, 285, "285Hz – Tissue Healing / Restoration", 'turquoise'),
-
-    (396, 396, "Solfeggio 396Hz Root Chakra (1st)", 'orange'),
-    (417, 417, "Solfeggio 417Hz Sacral Chakra (2nd)", 'orange'),
-    (432, 432, "Solfeggio 432Hz Heart Chakra (4th)", 'orange'),
-    (528, 528, "Solfeggio 528Hz Solar Plexus Chakra (3rd)", 'green'),
-    (741, 741, "Solfeggio 741Hz Throat Chakra (5th)", 'cyan'),
-    (963, 963, "Solfeggio 963Hz Crown Chakra (7th)", 'violet'),
-]
+# base_bands = [
+#     (136.1, 136.1, "OM (C#3) 3rd Eye (6th)", 'purple'),
+#
+#     (172, 172, "172Hz – Inner Balance / Spleen Meridian", 'blue'),
+#     (215, 215, "215Hz – Emotional Clearing / Regeneration", 'skyblue'),
+#     (285, 285, "285Hz – Tissue Healing / Restoration", 'turquoise'),
+#
+#     (396, 396, "396Hz - Root Chakra (1st)", 'orange'),
+#     (417, 417, "417Hz - Sacral Chakra (2nd)", 'orange'),
+#     (432, 432, "432Hz - Heart Chakra (4th)", 'orange'),
+#     (528, 528, "528Hz - Solar Plexus Chakra (3rd)", 'green'),
+#     (741, 741, "741Hz - Throat Chakra (5th)", 'cyan'),
+#     (963, 963, "963Hz - Crown Chakra (7th)", 'violet'),
+# ]
 
 # Removed Positive frequencies due to wide range = wide multiples = many false hits
 
