@@ -55,21 +55,37 @@ CHAKRA_FREQUENCY_BANDS = []
 # Narrow Range Detection (+-2) except first 3
 
 # CURRENT TESTING
-
+#
 base_bands = [
-    (135.4, 136.8, "136.1 - OM (C#3) 3rd Eye (6th)", 'purple'),
+    (128.1, 142.1, "136.1 - OM (C#3) 3rd Eye (6th)", 'purple'),  # TWEAK
 
     (171.7, 172.3, "172Hz – Inner Balance / Spleen Meridian", 'blue'),
     (214.6, 215.4, "215Hz – Emotional Clearing / Regeneration", 'skyblue'),
-    (280, 290, "285Hz – Tissue Healing / Restoration", 'turquoise'),
+    (278, 292, "285Hz – Tissue Healing / Restoration", 'turquoise'),
 
-    (389, 401, "Solfeggio 396Hz Root Chakra (1st)", 'black'),
-    (407, 427, "Solfeggio 417Hz Sacral Chakra (2nd)", 'red'),
-    (421, 442, "Solfeggio 432Hz Heart Chakra (4th)", 'orange'),
-    (518, 528, "Solfeggio 528Hz Solar Plexus Chakra (3rd)", 'green'),
-    (730, 752, "Solfeggio 741Hz Throat Chakra (5th)", 'cyan'),
+    (386, 406, "Solfeggio 396Hz Root Chakra (1st)", 'black'),  # TWEAK
+    (407, 421.9, "Solfeggio 417Hz Sacral Chakra (2nd)", 'red'),
+    (422, 442, "Solfeggio 432Hz Heart Chakra (4th)", 'orange'),
+    (517, 529, "Solfeggio 528Hz Solar Plexus Chakra (3rd)", 'green'),
+    (721, 761, "Solfeggio 741Hz Throat Chakra (5th)", 'cyan'),
     (936, 990, "Solfeggio 963Hz Crown Chakra (7th)", 'violet'),
 ]
+
+
+# base_bands = [
+#     (134.1, 138.1, "136.1 - OM (C#3) 3rd Eye (6th)", 'purple'),  # no hits
+#
+#     (170.5, 173.5, "172Hz – Inner Balance / Spleen Meridian", 'blue'),  # no hits
+#     (214.7, 215.3, "215Hz – Emotional Clearing / Regeneration", 'skyblue'),
+#     (289, 291, "285Hz – Tissue Healing / Restoration", 'turquoise'),  # no hits
+#
+#     (389, 401, "396Hz – Root Chakra (1st)", 'black'),
+#     (407, 427, "417Hz - Sacral Chakra (2nd)", 'red'),
+#     (417, 445, "432Hz - Heart Chakra (4th)", 'orange'),  # no hits
+#     (517, 529, "528Hz - Solar Plexus Chakra (3rd)", 'green'),  # no hits
+#     (718, 764, "741Hz - Throat Chakra (5th)", 'cyan'),
+#     (936, 990, "963Hz - Crown Chakra (7th)", 'violet'),
+# ]
 
 # NEW FREQUENCIES TO ADD === 888,1111   +   LIST AT BOTTOM OF PAGE (NEGATIVE, ALPHA, DETA, THETA, ETC.)
 
@@ -86,12 +102,12 @@ base_bands = [
 #     (215, 215, "215Hz – Emotional Clearing / Regeneration", 'skyblue'),
 #     (285, 285, "285Hz – Tissue Healing / Restoration", 'turquoise'),
 #
-#     (396, 396, "Solfeggio 396Hz Root Chakra (1st)", 'orange'),
-#     (417, 417, "Solfeggio 417Hz Sacral Chakra (2nd)", 'orange'),
-#     (432, 432, "Solfeggio 432Hz Heart Chakra (4th)", 'orange'),
-#     (528, 528, "Solfeggio 528Hz Solar Plexus Chakra (3rd)", 'green'),
-#     (741, 741, "Solfeggio 741Hz Throat Chakra (5th)", 'cyan'),
-#     (963, 963, "Solfeggio 963Hz Crown Chakra (7th)", 'violet'),
+#     (396, 396, "396Hz - Root Chakra (1st)", 'orange'),
+#     (417, 417, "417Hz - Sacral Chakra (2nd)", 'orange'),
+#     (432, 432, "432Hz - Heart Chakra (4th)", 'orange'),
+#     (528, 528, "528Hz - Solar Plexus Chakra (3rd)", 'green'),
+#     (741, 741, "741Hz - Throat Chakra (5th)", 'cyan'),
+#     (963, 963, "963Hz - Crown Chakra (7th)", 'violet'),
 # ]
 
 # Removed Positive frequencies due to wide range = wide multiples = many false hits
