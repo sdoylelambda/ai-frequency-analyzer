@@ -57,7 +57,7 @@ CHAKRA_FREQUENCY_BANDS = []
 # CURRENT TESTING
 #
 base_bands = [
-    (136.1, 136.1, "136.1 - OM (C#3) 3rd Eye (6th)", 'blue'),  # TWEAK
+    (134.1, 138.1, "136.1 - OM (C#3) 3rd Eye (6th)", 'blue'),  # TWEAK
 
     (171, 173, "172Hz – Inner Balance / Spleen Meridian", 'blue'),
     (210, 220, "215Hz – Emotional Clearing / Regeneration", 'skyblue'),
