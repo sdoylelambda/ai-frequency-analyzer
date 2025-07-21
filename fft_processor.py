@@ -74,7 +74,7 @@ def detect_peaks(freqs, magnitude, threshold=200000, match_rate_threshold=0.125,
     peaks = []
     matched_peaks = 0
     total_peaks = 0
-    skip_radius_hz = 4  # ADJUST HZ RANGE FINDER ---- MAYBE MAKE THIS ZERO AND ADJUST RANGES ON CONFIG
+    skip_radius_hz = 2  # ADJUST HZ RANGE FINDER ---- MAYBE MAKE THIS ZERO AND ADJUST RANGES ON CONFIG
     used_freqs = []
 
     for freq, mag in sorted(zip(freqs, magnitude), key=lambda x: -x[1]):
