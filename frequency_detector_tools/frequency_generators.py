@@ -14,7 +14,7 @@ def play_tone(freq=528.0, duration=2.0, volume=0.5, sample_rate=44100):
 
 
 # test_freqs = [741]
-test_freqs = [136.1, 172, 215, 285, 396, 417, 432, 528, 741, 963]
+test_freqs = [136.1, 172, 215, 285, 396, 417, 432, 528, 741, 888, 999, 963, 1111]
 
 for freq in test_freqs:
     print(f"Playing {freq} Hz")

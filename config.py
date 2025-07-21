@@ -57,7 +57,7 @@ CHAKRA_FREQUENCY_BANDS = []
 # CURRENT TESTING
 #
 base_bands = [
-    (128.1, 142.1, "136.1 - OM (C#3) 3rd Eye (6th)", 'blue'),  # TWEAK
+    (136.1, 136.1, "136.1 - OM (C#3) 3rd Eye (6th)", 'blue'),  # TWEAK
 
     (171, 173, "172Hz – Inner Balance / Spleen Meridian", 'blue'),
     (210, 220, "215Hz – Emotional Clearing / Regeneration", 'skyblue'),
@@ -81,7 +81,19 @@ base_bands = [
     (18, 20, "Fear/Infrasound", 'darkred'),
     (70, 90, "Agitation Band", 'tomato'),
     (666, 666, "666Hz (symbolic)", 'red'),
+
+    (1081, 1141, "1111 - Spiritual Awakening", 'gold'),
+    (969, 1029, "999 - Manifestation and Transformation", 'gold'),
+    (858, 918, "888 - Abundance and Prosperity", 'gold'),
+    (747, 807, "777 - Positive Energy Flow", 'violet'),
 ]
+
+# ADD THESE NEXT
+# 1111
+# 999
+# 888
+# 777
+
 
 
 
