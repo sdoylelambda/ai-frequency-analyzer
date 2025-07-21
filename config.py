@@ -57,19 +57,33 @@ CHAKRA_FREQUENCY_BANDS = []
 # CURRENT TESTING
 #
 base_bands = [
-    (128.1, 142.1, "136.1 - OM (C#3) 3rd Eye (6th)", 'purple'),  # TWEAK
+    (128.1, 142.1, "136.1 - OM (C#3) 3rd Eye (6th)", 'blue'),  # TWEAK
 
-    (171.7, 172.3, "172Hz – Inner Balance / Spleen Meridian", 'blue'),
-    (214.6, 215.4, "215Hz – Emotional Clearing / Regeneration", 'skyblue'),
-    (278, 292, "285Hz – Tissue Healing / Restoration", 'turquoise'),
+    (171, 173, "172Hz – Inner Balance / Spleen Meridian", 'blue'),
+    (210, 220, "215Hz – Emotional Clearing / Regeneration", 'skyblue'),
+    (284, 286, "285Hz – Tissue Healing / Restoration", 'turquoise'),
 
-    (386, 406, "Solfeggio 396Hz Root Chakra (1st)", 'black'),  # TWEAK
-    (407, 421.9, "Solfeggio 417Hz Sacral Chakra (2nd)", 'red'),
-    (422, 442, "Solfeggio 432Hz Heart Chakra (4th)", 'orange'),
-    (517, 529, "Solfeggio 528Hz Solar Plexus Chakra (3rd)", 'green'),
-    (721, 761, "Solfeggio 741Hz Throat Chakra (5th)", 'cyan'),
-    (936, 990, "Solfeggio 963Hz Crown Chakra (7th)", 'violet'),
+    (395.5, 396.5, "396Hz – Root Chakra (1st)", 'red'),  # TWEAK
+    (416.5, 417.5, "417Hz – Sacral Chakra (2nd)", 'orange'),
+    (431.5, 432.5, "432Hz – Heart Chakra (4th)", 'green'),
+
+    (517, 529, "528Hz – Solar Plexus Chakra (3rd)", 'yellow'),
+    (721, 761, "741Hz – Throat Chakra (5th)", 'cyan'),
+    (943, 983, "963Hz – Crown Chakra (7th)", 'violet'),
+
+
+    (4, 8, "Theta", 'lightgreen'),
+    (8, 12, "Alpha", 'lightpink'),
+
+
+
+    (0.1, 3.9, "Sub-Delta (disorienting)", 'red'),
+    (18, 20, "Fear/Infrasound", 'darkred'),
+    (70, 90, "Agitation Band", 'tomato'),
+    (666, 666, "666Hz (symbolic)", 'red'),
 ]
+
+
 
 
 # base_bands = [

@@ -7,7 +7,7 @@ def play_tone(freq=528.0, duration=2.0, volume=0.5, sample_rate=44100):
     tone = np.sin(freq * 2 * np.pi * t)
     audio = tone * volume
     sd.play(audio, samplerate=sample_rate)
-    sd.wait()
+    sd.wait(2)
 
 # Example: Play 528 Hz for 2 seconds
 # play_tone(freq=528.0, duration=2.0, volume=0.5)
@@ -18,4 +18,4 @@ test_freqs = [136.1, 172, 215, 285, 396, 417, 432, 528, 741, 963]
 
 for freq in test_freqs:
     print(f"Playing {freq} Hz")
-    play_tone(freq=freq, duration=3.0)
+    play_tone(freq=freq, duration=5.0)

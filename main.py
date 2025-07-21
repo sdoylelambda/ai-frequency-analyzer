@@ -126,7 +126,8 @@ class AudioVisualizerApp:
         self.ax_spectrum.set_xlim(0, 1000)
         self.ax_spectrum.set_ylim(0, np.max(adjusted_mag) + 100)
 
-        threshold = 10000 * self.filter_strength_multiplier
+        # Adjust threshold value here
+        threshold = 25000 * self.filter_strength_multiplier
 
         for freq, mag, label, color in detect_peaks(freqs, adjusted_mag, threshold=threshold):
             log_alert_to_file(freq, mag, label)
