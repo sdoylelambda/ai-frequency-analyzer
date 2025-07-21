@@ -38,7 +38,7 @@ def is_harmonic(freq, base_freqs, tolerance=2.0):
     return False
 
 
-def detect_peaks(freqs, magnitude, threshold=10000, match_rate_threshold=0.5, debug=True):
+def detect_peaks(freqs, magnitude, threshold=200000, match_rate_threshold=0.175, debug=True):  # threshold=10000 match_rate_threshold=0.5
     """Detect base frequency peaks from FFT data with harmonic suppression and match rate gating."""
     freqs = np.asarray(freqs)
     magnitude = np.asarray(magnitude)
@@ -74,7 +74,7 @@ def detect_peaks(freqs, magnitude, threshold=10000, match_rate_threshold=0.5, de
     peaks = []
     matched_peaks = 0
     total_peaks = 0
-    skip_radius_hz = 8
+    skip_radius_hz = 4  # ADJUST HZ RANGE FINDER
     used_freqs = []
 
     for freq, mag in sorted(zip(freqs, magnitude), key=lambda x: -x[1]):
@@ -98,6 +98,7 @@ def detect_peaks(freqs, magnitude, threshold=10000, match_rate_threshold=0.5, de
 
     if debug:
         print(f"Match rate: {matched_peaks}/{total_peaks} ({match_rate:.1%})")
+        print(f"Threshold========> {threshold}")
 
     if match_rate < match_rate_threshold:
         if debug:
