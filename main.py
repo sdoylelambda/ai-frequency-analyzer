@@ -97,7 +97,41 @@ class AudioVisualizerApp:
         summary_text = "\n".join(summary_lines)
         return summary_text, full_counts
 
+    def generate_paragraph_review(self):
+        if not self.frequency_counts:
+            return "No chakra data available yet.", {}
+
+        sorted_chakras = sorted(
+            self.frequency_counts.items(), key=lambda x: x[1], reverse=True
+        )
+
+        best = [ch for ch, cnt in sorted_chakras if cnt >= 5]
+        moderate = [ch for ch, cnt in sorted_chakras if 2 <= cnt < 5]
+        trace = [ch for ch, cnt in sorted_chakras if cnt == 1]
+
+        lines = []
+
+        if best:
+            effects = [CHAKRA_EFFECTS.get(ch, "") for ch in best]
+            lines.append("🟢 Strong activation in: " + ", ".join(best).title() +
+                         f" — suggesting: {', '.join(effects)}.")
+        if moderate:
+            effects = [CHAKRA_EFFECTS.get(ch, "") for ch in moderate]
+            lines.append("🟡 Moderate presence of: " + ", ".join(moderate).title() +
+                         f", possibly indicating: {', '.join(effects)}.")
+        if trace:
+            effects = [CHAKRA_EFFECTS.get(ch, "") for ch in trace]
+            lines.append("🔵 Trace signals in: " + ", ".join(trace).title() +
+                         f", may reflect subtle or beginning engagement with: {', '.join(effects)}.")
+
+        if not lines:
+            lines.append("No significant chakra activation was detected.")
+
+        paragraph = "\n\n".join(lines)
+        return paragraph, dict(sorted_chakras)
+
     def show_review(self):
+        # Step 1: Show old GUI log logic
         summary_text, _ = self.generate_review()
 
         if summary_text:
@@ -105,31 +139,53 @@ class AudioVisualizerApp:
             self.log_message(summary_text)
         else:
             self.log_message("No chakra hits detected yet.")
+            return  # Stop if nothing to show
 
-        # Pop-up window with full chakra report (including 0s)
+        # Step 2: Pop-up window with paragraph-style summary
+        paragraph, full_counts = self.generate_paragraph_review()
+
         popup = Toplevel(self.root)
         popup.title("Chakra Activation Review")
-        popup.geometry("420x960")
+        popup.geometry("500x500")
 
         Label(
             popup,
-            text="🧘 Chakra Activation Report",
+            text="🧘 Chakra Activation Summary",
             font=("Helvetica", 14, "bold")
         ).pack(pady=10)
 
-        for chakra in CHAKRA_EFFECTS:
-            # ✅ Use self.frequency_counts directly
-            count = self.frequency_counts.get(chakra, 0)
-            effect = CHAKRA_EFFECTS.get(chakra, "Unknown Effect")
+        Label(
+            popup,
+            text=paragraph,
+            wraplength=460,
+            justify="left",
+            anchor="w",
+            font=("Helvetica", 11)
+        ).pack(padx=20, pady=10)
 
+        Label(
+            popup,
+            text="----------------------------------------",
+            font=("Helvetica", 10)
+        ).pack(pady=5)
+
+        Label(
+            popup,
+            text="📊 Chakra Hit Counts:",
+            font=("Helvetica", 12, "bold")
+        ).pack(pady=5)
+
+        for chakra in CHAKRA_EFFECTS:
+            count = self.frequency_counts.get(chakra, 0)
+            effect = CHAKRA_EFFECTS[chakra]
             Label(
                 popup,
                 text=f"{chakra.capitalize()}: {count} hits\n↳ {effect}",
                 justify="left",
                 anchor="w",
-                wraplength=400,
+                wraplength=460,
                 font=("Helvetica", 10)
-            ).pack(anchor="w", padx=20, pady=3)
+            ).pack(anchor="w", padx=20, pady=2)
 
         Button(popup, text="Close", command=popup.destroy).pack(pady=10)
 
