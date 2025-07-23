@@ -9,6 +9,18 @@ from alert_system import log_alert_to_file, log_alert_to_gui
 from logger import log_to_gui
 from gui import build_gui
 from config import SAMPLE_RATE, FRAME_SIZE
+from tkinter import Button, Toplevel, Label, END
+
+
+CHAKRA_EFFECTS = {
+    'root': "Grounding and physical stability",
+    'sacral': "Emotional flow and creativity",
+    'solar_plexus': "Empowerment and self-confidence",
+    'heart': "Love, healing, and connection",
+    'throat': "Communication and authenticity",
+    'third_eye': "Insight, clarity, and intuition",
+    'crown': "Spiritual connection and peace"
+}
 
 
 class AudioVisualizerApp:
@@ -52,6 +64,74 @@ class AudioVisualizerApp:
 
         self.widgets["increase_btn"].config(command=self.increase_filter_strength)
         self.widgets["decrease_btn"].config(command=self.decrease_filter_strength)
+
+        # Review button
+        self.widgets["review_btn"] = Button(self.root, text="Generate Review")
+        self.widgets["review_btn"].grid(row=1, column=0, columnspan=2, pady=5)
+        self.widgets["review_btn"].config(command=self.show_review)
+
+    def log_message(self, message):
+        # self.widgets["log_text"].insert(END, message + "\n")
+        # self.widgets["log_text"].see(END)
+        log_to_gui(self.log_text, message + "\n")
+
+    def generate_review(self):
+        if not self.frequency_counts:
+            self.log_message("No chakra data available yet.")
+            return "", {}
+
+        # Sort chakras by hit count descending
+        sorted_chakras = sorted(
+            self.frequency_counts.items(), key=lambda x: x[1], reverse=True
+        )
+
+        summary_lines = []
+        full_counts = {}
+
+        for chakra, count in sorted_chakras:
+            effect = CHAKRA_EFFECTS.get(chakra, "Unknown Effect")
+            full_counts[chakra] = count
+            if count > 0:
+                summary_lines.append(f"{chakra.capitalize()} ({count} hits): {effect}")
+
+        summary_text = "\n".join(summary_lines)
+        return summary_text, full_counts
+
+    def show_review(self):
+        summary_text, _ = self.generate_review()
+
+        if summary_text:
+            self.log_message("\n📝 Review Generated:")
+            self.log_message(summary_text)
+        else:
+            self.log_message("No chakra hits detected yet.")
+
+        # Pop-up window with full chakra report (including 0s)
+        popup = Toplevel(self.root)
+        popup.title("Chakra Activation Review")
+        popup.geometry("420x960")
+
+        Label(
+            popup,
+            text="🧘 Chakra Activation Report",
+            font=("Helvetica", 14, "bold")
+        ).pack(pady=10)
+
+        for chakra in CHAKRA_EFFECTS:
+            # ✅ Use self.frequency_counts directly
+            count = self.frequency_counts.get(chakra, 0)
+            effect = CHAKRA_EFFECTS.get(chakra, "Unknown Effect")
+
+            Label(
+                popup,
+                text=f"{chakra.capitalize()}: {count} hits\n↳ {effect}",
+                justify="left",
+                anchor="w",
+                wraplength=400,
+                font=("Helvetica", 10)
+            ).pack(anchor="w", padx=20, pady=3)
+
+        Button(popup, text="Close", command=popup.destroy).pack(pady=10)
 
     def start_visualization(self):
         self.audio.open_stream()
