@@ -9,7 +9,7 @@ from alert_system import log_alert_to_file, log_alert_to_gui
 from logger import log_to_gui
 from gui import build_gui
 from config import SAMPLE_RATE, FRAME_SIZE
-from tkinter import Button, Toplevel, Label, END
+from tkinter import Button, Toplevel, Label, END, Text, RIGHT, Frame, Scrollbar, Y, BOTH
 
 
 CHAKRA_EFFECTS = {
@@ -36,6 +36,8 @@ class AudioVisualizerApp:
         self.calibrated = False
         self.baseline_fft = None
         self.calibration_in_progress = False
+        self.latest_fft_mags = None
+        self.latest_fft_freqs = None
 
         # Setup matplotlib figure and axes
         self.fig, (self.ax_waveform, self.ax_spectrum) = plt.subplots(1, 2, figsize=(12, 5))
@@ -75,6 +77,114 @@ class AudioVisualizerApp:
         # self.widgets["log_text"].see(END)
         log_to_gui(self.log_text, message + "\n")
 
+    # Move these to Utils folder/file
+
+    def analyze_chakra_energy_balance(self, frequencies, amplitudes, debug=False):
+        chakra_bands = {
+            'root': (20, 60),
+            'sacral': (60, 120),
+            'solar_plexus': (120, 250),
+            'heart': (250, 400),
+            'throat': (400, 600),
+            'third_eye': (600, 900),
+            'crown': (900, 1200)
+        }
+
+        min_chakra_pct = 25.0  # Ignore chakras below this percentage
+
+        chakra_energy = {}
+        total_energy = 0
+
+        # Calculate energy in each chakra band
+        for chakra, (low, high) in chakra_bands.items():
+            mask = (frequencies >= low) & (frequencies < high)
+            energy = np.sum(amplitudes[mask])
+            chakra_energy[chakra] = energy
+            total_energy += energy
+
+        if total_energy == 0:
+            return {
+                "chakra_energies": {k: 0 for k in chakra_bands},
+                "balance_score": 0.0,
+                "flags": ["🔴 No signal detected in chakra range."]
+            }
+
+        # Normalize
+        chakra_percentages = {
+            chakra: round((energy / total_energy) * 100, 2)
+            for chakra, energy in chakra_energy.items()
+        }
+
+        # Remove chakras that don't meet threshold (optional)
+        filtered_chakra_percentages = {
+            chakra: pct for chakra, pct in chakra_percentages.items()
+            if pct >= min_chakra_pct
+        }
+
+        energy_values = np.array(list(filtered_chakra_percentages.values()))
+        std_dev = np.std(energy_values)
+        balance_score = round(1.0 - min(std_dev / 40.0, 1.0), 2)
+
+        flags = []
+        threshold_low = 5
+        threshold_high = 30
+
+        # Individual Chakra Checks
+        for chakra, value in filtered_chakra_percentages.items():
+            if threshold_low < value < threshold_high:
+                flags.append(f"✅ {chakra.title()} is well-balanced ({value:.1f}%)")
+            elif value < threshold_low:
+                flags.append(f"🟧 Chakra suppression: {chakra.replace('_', ' ').title()} is unusually low.")
+            elif value > threshold_high:
+                flags.append(f"🟨 Chakra over stimulation: {chakra.replace('_', ' ').title()} is dominating.")
+
+        # Only run complex pattern checks if total energy exceeds noise threshold
+        if total_energy > 30000:  # <-- adjust this value based on your noise floor
+
+            # Complex Pattern-Based Flags
+            if filtered_chakra_percentages.get('root', 0) > 25 and all(
+                    filtered_chakra_percentages.get('c', 0) < 10 for c in ['heart', 'throat', 'third_eye', 'crown']):
+                flags.append(
+                    "🟥 This audio overstimulates survival instincts while suppressing emotional and spiritual centers.")
+
+            if all(filtered_chakra_percentages.get(c, 0) < threshold_low for c in ['heart', 'throat']):
+                flags.append("🟧 This track may dampen heart and communication centers due to tonal compression.")
+
+            if filtered_chakra_percentages.get('crown', 0) < 3 and filtered_chakra_percentages.get('third_eye', 0) < 3:
+                flags.append("🟨 Audio may dull intuitive and cognitive energy. Prolonged exposure not recommended.")
+
+            if max(frequencies) > 10000 and total_energy > 0 and sum(amplitudes[frequencies > 10000]) > 0.3 * total_energy:
+                flags.append(
+                    "🟥 High-frequency content may cause stress or anxiety while failing to activate any energy "
+                    "centers.")
+
+        if debug:
+            print(f"Total Energy: {total_energy}")
+            print("Filtered Chakra %:", filtered_chakra_percentages)
+
+        # Placeholder NLP-based flag (can be linked to actual speech emotion detection results)
+        # You can toggle this from your NLP results if applicable
+        # Example: if emotional_disconnection_score > 0.7:
+        # flags.append("🟨 Speech pattern shows signs of emotional disconnection.
+        # May lead to low-vibration entrainment.")
+        if 'speech_analysis_trigger' in chakra_energy:  # placeholder for future integration
+            flags.append(
+                "🟨 Speech pattern shows signs of emotional disconnection. May lead to low-vibration entrainment.")
+
+        if balance_score < 0.5:
+            flags.append("🔺 Energy distribution is imbalanced. Consider grounding or focusing techniques.")
+
+        if debug:
+            print("Chakra %:", filtered_chakra_percentages)
+            print("Balance score:", balance_score)
+            print("Flags:", flags)
+
+        return {
+            "chakra_energies": filtered_chakra_percentages,
+            "balance_score": balance_score,
+            "flags": flags
+        }
+
     def generate_review(self):
         if not self.frequency_counts:
             self.log_message("No chakra data available yet.")
@@ -97,6 +207,57 @@ class AudioVisualizerApp:
         summary_text = "\n".join(summary_lines)
         return summary_text, full_counts
 
+    def generate_activation_summary(self):
+        if not self.frequency_counts:
+            return "No chakra hits recorded yet."
+
+        sorted_chakras = sorted(
+            self.frequency_counts.items(), key=lambda x: x[1], reverse=True
+        )
+
+        summary = []
+        for chakra, count in sorted_chakras:
+            if count > 0:
+                effect = CHAKRA_EFFECTS.get(chakra, "Unknown effect")
+                summary.append(f"🔹 {chakra.capitalize()} ({count} hits): {effect}")
+        return "\n".join(summary) if summary else "No active chakra hits detected."
+
+    def generate_paragraph_review(self):
+        if not self.frequency_counts:
+            return "No chakra data available yet.", {}
+
+        sorted_chakras = sorted(
+            self.frequency_counts.items(), key=lambda x: x[1], reverse=True
+        )
+
+        best = [ch for ch, cnt in sorted_chakras if cnt >= 5]
+        moderate = [ch for ch, cnt in sorted_chakras if 2 <= cnt < 5]
+        trace = [ch for ch, cnt in sorted_chakras if cnt == 1]
+
+        lines = []
+
+        if best:
+            effects = [CHAKRA_EFFECTS.get(ch, "") for ch in best if CHAKRA_EFFECTS.get(ch, "")]
+            effect_str = ", ".join(effects) if effects else "varied energetic responses"
+            lines.append("🟢 Strong activation in: " + ", ".join(best).title() +
+                         f" — suggesting: {effect_str}.")
+        if moderate:
+            effects = [CHAKRA_EFFECTS.get(ch, "") for ch in moderate if CHAKRA_EFFECTS.get(ch, "")]
+            effect_str = ", ".join(effects) if effects else "moderate energetic influences"
+            lines.append("🟡 Moderate presence of: " + ", ".join(moderate).title() +
+                         f", possibly indicating: {effect_str}.")
+        if trace:
+            effects = [CHAKRA_EFFECTS.get(ch, "") for ch in trace if CHAKRA_EFFECTS.get(ch, "")]
+            effect_str = ", ".join(effects) if effects else "subtle signals"
+            lines.append("🔵 Trace signals in: " + ", ".join(trace).title() +
+                         f", may reflect: {effect_str}.")
+
+        if not lines:
+            lines.append("No significant chakra activation was detected.")
+
+        paragraph = "\n\n".join(lines)
+        return paragraph, dict(sorted_chakras)
+
     def show_review(self):
         summary_text, _ = self.generate_review()
 
@@ -106,32 +267,184 @@ class AudioVisualizerApp:
         else:
             self.log_message("No chakra hits detected yet.")
 
-        # Pop-up window with full chakra report (including 0s)
+        # Run energy balance analysis (if FFT data exists)
+        freqs = getattr(self, "latest_fft_freqs", None)
+        mags = getattr(self, "latest_fft_mags", None)
+
+        if freqs is not None and mags is not None and len(freqs) == len(mags):
+            balance = self.analyze_chakra_energy_balance(freqs, mags)
+        else:
+            balance = {
+                "chakra_energies": {},
+                "balance_score": 0.0,
+                "flags": ["⚠️ No valid FFT data available."]
+            }
+
+        # Generate paragraph summary
+        balance_lines = []
+        sorted_chakras = sorted(
+            balance["chakra_energies"].items(), key=lambda x: x[1], reverse=True
+        )
+        for chakra, pct in sorted_chakras:
+            if pct >= 20:
+                balance_lines.append(
+                    f"✅ {chakra.capitalize()} is highly activated ({pct:.1f}%), suggesting strength in {CHAKRA_EFFECTS.get(chakra, 'that area')}.")
+            elif pct >= 10:
+                balance_lines.append(f"ℹ️ {chakra.capitalize()} shows moderate engagement ({pct:.1f}%).")
+            elif pct > 0:
+                balance_lines.append(f"☁️ {chakra.capitalize()} shows only subtle activation ({pct:.1f}%).")
+            else:
+                balance_lines.append(f"⚫ {chakra.capitalize()} was not detected.")
+
+        balance_lines.append(f"\n🧭 Overall Energy Balance Score: {balance['balance_score'] * 10:.1f}/10")
+        if balance["flags"]:
+            balance_lines.append("\n⚠️ Observations:")
+            balance_lines.extend(balance["flags"])
+
+        # Create pop-up window
         popup = Toplevel(self.root)
         popup.title("Chakra Activation Review")
-        popup.geometry("420x960")
+        popup.geometry("600x1000")
+
+        Label(popup, text="🧘 Chakra Activation Summary", font=("Helvetica", 14, "bold")).pack(pady=10)
+
+        # --- SCROLLABLE TEXT WIDGET WITH PARAGRAPH & FLAG SUMMARY ---
+        frame = Frame(popup)
+        frame.pack(fill=BOTH, expand=True, padx=10, pady=5)
+
+        scrollbar = Scrollbar(frame)
+        scrollbar.pack(side=RIGHT, fill=Y)
+
+        textbox = Text(frame, wrap="word", yscrollcommand=scrollbar.set, font=("Helvetica", 10))
+        textbox.pack(side="left", fill=BOTH, expand=True)
+        scrollbar.config(command=textbox.yview)
+
+        paragraph = "\n\n".join(balance_lines)
+        textbox.insert("1.0", paragraph)
+        textbox.config(state="disabled")
+
+        # --- Divider ---
+        Label(popup, text="―" * 70, fg="gray").pack(pady=10)
+
+        # --- DETAILED PERCENTAGE REPORT ---
+        Label(popup, text="📐 Detailed Chakra Energy Percentages", font=("Helvetica", 12, "bold")).pack(pady=(5, 2))
+
+        for chakra, pct in balance["chakra_energies"].items():
+            Label(
+                popup,
+                text=f"{chakra.capitalize()}: {pct:.2f}%",
+                justify="left",
+                anchor="w",
+                font=("Helvetica", 10)
+            ).pack(anchor="w", padx=20)
 
         Label(
             popup,
-            text="🧘 Chakra Activation Report",
-            font=("Helvetica", 14, "bold")
+            text=f"\n🧭 Balance Score: {balance['balance_score'] * 10:.1f}/10",
+            font=("Helvetica", 11, "italic"),
+            fg="blue"
         ).pack(pady=10)
 
-        for chakra in CHAKRA_EFFECTS:
-            # ✅ Use self.frequency_counts directly
-            count = self.frequency_counts.get(chakra, 0)
-            effect = CHAKRA_EFFECTS.get(chakra, "Unknown Effect")
+        # --- FLAGS SECTION (already in paragraph, but optional to repeat) ---
+        if balance["flags"]:
+            Label(popup, text="⚠️ Flags:", font=("Helvetica", 11, "bold")).pack(pady=(10, 0))
+            for flag in balance["flags"]:
+                Label(
+                    popup,
+                    text=flag,
+                    justify="left",
+                    anchor="w",
+                    wraplength=560,
+                    fg="red",
+                    font=("Helvetica", 9)
+                ).pack(anchor="w", padx=20, pady=2)
 
-            Label(
-                popup,
-                text=f"{chakra.capitalize()}: {count} hits\n↳ {effect}",
-                justify="left",
-                anchor="w",
-                wraplength=400,
-                font=("Helvetica", 10)
-            ).pack(anchor="w", padx=20, pady=3)
+        Button(popup, text="Close", command=popup.destroy).pack(pady=15)
 
-        Button(popup, text="Close", command=popup.destroy).pack(pady=10)
+    def alert_chakra_flags(self, flags):
+        if flags:
+            self.log_message("⚠️ Chakra Imbalance Alerts:")
+            for flag in flags:
+                self.log_message(flag)
+
+    # def show_review(self):
+    #     summary_text, _ = self.generate_review()
+    #
+    #     if summary_text:
+    #         self.log_message("\n📝 Review Generated:")
+    #         self.log_message(summary_text)
+    #     else:
+    #         self.log_message("No chakra hits detected yet.")
+    #
+    #     # Run energy balance analysis (if FFT data exists)
+    #     freqs = getattr(self, "latest_fft_freqs", None)
+    #     mags = getattr(self, "latest_fft_mags", None)
+    #
+    #     if freqs is not None and mags is not None and len(freqs) == len(mags):
+    #         balance = self.analyze_chakra_energy_balance(freqs, mags)
+    #     else:
+    #         balance = {
+    #             "chakra_energies": {},
+    #             "balance_score": 0.0,
+    #             "flags": ["⚠️ No valid FFT data available."]
+    #         }
+    #
+    #     # Create pop-up window
+    #     popup = Toplevel(self.root)
+    #     popup.title("Chakra Activation Review")
+    #     popup.geometry("520x1000")
+    #
+    #     Label(popup, text="🧘 Chakra Activation Report", font=("Helvetica", 14, "bold")).pack(pady=10)
+    #
+    #     # --- GUI Summary (hit counts & effects) ---
+    #     for chakra in CHAKRA_EFFECTS:
+    #         count = self.frequency_counts.get(chakra, 0)
+    #         effect = CHAKRA_EFFECTS.get(chakra, "Unknown Effect")
+    #         Label(
+    #             popup,
+    #             text=f"{chakra.capitalize()}: {count} hits\n↳ {effect}",
+    #             justify="left",
+    #             anchor="w",
+    #             wraplength=480,
+    #             font=("Helvetica", 10)
+    #         ).pack(anchor="w", padx=20, pady=3)
+    #
+    #     # --- Separator ---
+    #     Label(popup, text="―" * 70, fg="gray").pack(pady=10)
+    #
+    #     # --- Chakra Energy Balance Report ---
+    #     Label(popup, text="🔬 Chakra Energy Balance Analysis", font=("Helvetica", 13, "bold")).pack(pady=(10, 5))
+    #
+    #     for chakra, pct in balance["chakra_energies"].items():
+    #         Label(
+    #             popup,
+    #             text=f"{chakra.capitalize()}: {pct:.2f}%",
+    #             justify="left",
+    #             anchor="w",
+    #             font=("Helvetica", 10)
+    #         ).pack(anchor="w", padx=20)
+    #
+    #     Label(
+    #         popup,
+    #         text=f"\n🧭 Balance Score: {balance['balance_score'] * 10:.1f}/10",
+    #         font=("Helvetica", 11, "italic"),
+    #         fg="blue"
+    #     ).pack(pady=10)
+    #
+    #     if balance["flags"]:
+    #         Label(popup, text="⚠️ Observations:", font=("Helvetica", 11, "bold")).pack(pady=(10, 0))
+    #         for flag in balance["flags"]:
+    #             Label(
+    #                 popup,
+    #                 text=flag,
+    #                 justify="left",
+    #                 anchor="w",
+    #                 wraplength=480,
+    #                 fg="red",
+    #                 font=("Helvetica", 9)
+    #             ).pack(anchor="w", padx=20, pady=2)
+    #
+    #     Button(popup, text="Close", command=popup.destroy).pack(pady=10)
 
     def start_visualization(self):
         self.audio.open_stream()
@@ -201,6 +514,10 @@ class AudioVisualizerApp:
         freqs, mag = compute_fft(self.data_buffer, self.sample_rate)
         adjusted_mag = mag if self.baseline_fft is None else np.clip(mag - self.baseline_fft, 0, None)
 
+        # ✅ Store latest snapshot for chakra energy balance analysis
+        self.latest_fft_freqs = freqs
+        self.latest_fft_mags = adjusted_mag  # use adjusted to match what's being visualized
+
         self.ax_spectrum.clear()
         self.ax_spectrum.plot(freqs, adjusted_mag, color='cyan')
         self.ax_spectrum.set_xlim(0, 1000)
@@ -217,6 +534,19 @@ class AudioVisualizerApp:
             if self.calibrated and label in self.frequency_counts:
                 self.frequency_counts[label] += 1
                 self.counter_vars[label].set(f"{label}: {self.frequency_counts[label]}")
+
+        # ✅ Real-time chakra energy balance check
+        if self.calibrated:
+            self.latest_fft_freqs = freqs
+            self.latest_fft_mags = adjusted_mag
+
+            # Only analyze if the total energy exceeds a noise threshold
+            energy = np.sum(adjusted_mag)
+            noise_floor = 50000  # You can tune this based on real-world quiet room FFT
+
+            if energy > noise_floor:
+                balance = self.analyze_chakra_energy_balance(freqs, adjusted_mag)
+                self.alert_chakra_flags(balance["flags"])
 
         self.canvas.draw()
         self.root.after(50, self.animate)
