@@ -90,6 +90,8 @@ class AudioVisualizerApp:
             'crown': (900, 1200)
         }
 
+        min_chakra_pct = 25.0  # Ignore chakras below this percentage
+
         chakra_energy = {}
         total_energy = 0
 
@@ -113,7 +115,13 @@ class AudioVisualizerApp:
             for chakra, energy in chakra_energy.items()
         }
 
-        energy_values = np.array(list(chakra_percentages.values()))
+        # Remove chakras that don't meet threshold (optional)
+        filtered_chakra_percentages = {
+            chakra: pct for chakra, pct in chakra_percentages.items()
+            if pct >= min_chakra_pct
+        }
+
+        energy_values = np.array(list(filtered_chakra_percentages.values()))
         std_dev = np.std(energy_values)
         balance_score = round(1.0 - min(std_dev / 40.0, 1.0), 2)
 
@@ -122,7 +130,7 @@ class AudioVisualizerApp:
         threshold_high = 30
 
         # Individual Chakra Checks
-        for chakra, value in chakra_percentages.items():
+        for chakra, value in filtered_chakra_percentages.items():
             if threshold_low < value < threshold_high:
                 flags.append(f"✅ {chakra.title()} is well-balanced ({value:.1f}%)")
             elif value < threshold_low:
@@ -130,21 +138,29 @@ class AudioVisualizerApp:
             elif value > threshold_high:
                 flags.append(f"🟨 Chakra over stimulation: {chakra.replace('_', ' ').title()} is dominating.")
 
-        # Complex Pattern-Based Flags
-        if chakra_percentages['root'] > 25 and all(
-                chakra_percentages[c] < 10 for c in ['heart', 'throat', 'third_eye', 'crown']):
-            flags.append(
-                "🟥 This audio overstimulates survival instincts while suppressing emotional and spiritual centers.")
+        # Only run complex pattern checks if total energy exceeds noise threshold
+        if total_energy > 30000:  # <-- adjust this value based on your noise floor
 
-        if all(chakra_percentages[c] < threshold_low for c in ['heart', 'throat']):
-            flags.append("🟧 This track may dampen heart and communication centers due to tonal compression.")
+            # Complex Pattern-Based Flags
+            if filtered_chakra_percentages.get('root', 0) > 25 and all(
+                    filtered_chakra_percentages.get('c', 0) < 10 for c in ['heart', 'throat', 'third_eye', 'crown']):
+                flags.append(
+                    "🟥 This audio overstimulates survival instincts while suppressing emotional and spiritual centers.")
 
-        if chakra_percentages['crown'] < 3 and chakra_percentages['third_eye'] < 3:
-            flags.append("🟨 Audio may dull intuitive and cognitive energy. Prolonged exposure not recommended.")
+            if all(filtered_chakra_percentages.get(c, 0) < threshold_low for c in ['heart', 'throat']):
+                flags.append("🟧 This track may dampen heart and communication centers due to tonal compression.")
 
-        if max(frequencies) > 10000 and total_energy > 0 and sum(amplitudes[frequencies > 10000]) > 0.3 * total_energy:
-            flags.append(
-                "🟥 High-frequency content may cause stress or anxiety while failing to activate any energy centers.")
+            if filtered_chakra_percentages.get('crown', 0) < 3 and filtered_chakra_percentages.get('third_eye', 0) < 3:
+                flags.append("🟨 Audio may dull intuitive and cognitive energy. Prolonged exposure not recommended.")
+
+            if max(frequencies) > 10000 and total_energy > 0 and sum(amplitudes[frequencies > 10000]) > 0.3 * total_energy:
+                flags.append(
+                    "🟥 High-frequency content may cause stress or anxiety while failing to activate any energy "
+                    "centers.")
+
+        if debug:
+            print(f"Total Energy: {total_energy}")
+            print("Filtered Chakra %:", filtered_chakra_percentages)
 
         # Placeholder NLP-based flag (can be linked to actual speech emotion detection results)
         # You can toggle this from your NLP results if applicable
@@ -159,12 +175,12 @@ class AudioVisualizerApp:
             flags.append("🔺 Energy distribution is imbalanced. Consider grounding or focusing techniques.")
 
         if debug:
-            print("Chakra %:", chakra_percentages)
+            print("Chakra %:", filtered_chakra_percentages)
             print("Balance score:", balance_score)
             print("Flags:", flags)
 
         return {
-            "chakra_energies": chakra_percentages,
+            "chakra_energies": filtered_chakra_percentages,
             "balance_score": balance_score,
             "flags": flags
         }
@@ -345,6 +361,12 @@ class AudioVisualizerApp:
 
         Button(popup, text="Close", command=popup.destroy).pack(pady=15)
 
+    def alert_chakra_flags(self, flags):
+        if flags:
+            self.log_message("⚠️ Chakra Imbalance Alerts:")
+            for flag in flags:
+                self.log_message(flag)
+
     # def show_review(self):
     #     summary_text, _ = self.generate_review()
     #
@@ -512,6 +534,19 @@ class AudioVisualizerApp:
             if self.calibrated and label in self.frequency_counts:
                 self.frequency_counts[label] += 1
                 self.counter_vars[label].set(f"{label}: {self.frequency_counts[label]}")
+
+        # ✅ Real-time chakra energy balance check
+        if self.calibrated:
+            self.latest_fft_freqs = freqs
+            self.latest_fft_mags = adjusted_mag
+
+            # Only analyze if the total energy exceeds a noise threshold
+            energy = np.sum(adjusted_mag)
+            noise_floor = 50000  # You can tune this based on real-world quiet room FFT
+
+            if energy > noise_floor:
+                balance = self.analyze_chakra_energy_balance(freqs, adjusted_mag)
+                self.alert_chakra_flags(balance["flags"])
 
         self.canvas.draw()
         self.root.after(50, self.animate)
