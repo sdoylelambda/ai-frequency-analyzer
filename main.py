@@ -25,6 +25,7 @@ CHAKRA_EFFECTS = {
 
 class AudioVisualizerApp:
     def __init__(self, root):
+        self.min_energy_for_flags = 3000  # or another reasonable threshold value
         self.root = root
         self.root.title("Cymatics Frequency Analyzer")
 
@@ -79,7 +80,7 @@ class AudioVisualizerApp:
 
     # Move these to Utils folder/file
 
-    def analyze_chakra_energy_balance(self, frequencies, amplitudes, debug=False):
+    def analyze_chakra_energy_balance(self, frequencies, amplitudes, debug=True):
         chakra_bands = {
             'root': (20, 60),
             'sacral': (60, 120),
@@ -90,7 +91,7 @@ class AudioVisualizerApp:
             'crown': (900, 1200)
         }
 
-        min_chakra_pct = 25.0  # Ignore chakras below this percentage
+        min_chakra_pct = 5.0  # Ignore chakras below this percentage
 
         chakra_energy = {}
         total_energy = 0
@@ -108,6 +109,7 @@ class AudioVisualizerApp:
                 "balance_score": 0.0,
                 "flags": ["🔴 No signal detected in chakra range."]
             }
+
 
         # Normalize
         chakra_percentages = {
@@ -129,17 +131,23 @@ class AudioVisualizerApp:
         threshold_low = 5
         threshold_high = 30
 
-        # Individual Chakra Checks
-        for chakra, value in filtered_chakra_percentages.items():
-            if threshold_low < value < threshold_high:
-                flags.append(f"✅ {chakra.title()} is well-balanced ({value:.1f}%)")
-            elif value < threshold_low:
-                flags.append(f"🟧 Chakra suppression: {chakra.replace('_', ' ').title()} is unusually low.")
-            elif value > threshold_high:
-                flags.append(f"🟨 Chakra over stimulation: {chakra.replace('_', ' ').title()} is dominating.")
+        # ⚠️ Add energy guard here using the dynamically passed min_energy_for_flags
+        # if self.min_energy_for_flags is None:
+        #     min_energy_for_flags = 1.5 * getattr(self, "baseline_energy", 3000)  # fallback if baseline_energy missing
+        # if debug:
+        #     print("Min energy for flags:", min_energy_for_flags)
+        if total_energy < self.min_energy_for_flags:
+            # Individual Chakra Checks
+            for chakra, value in filtered_chakra_percentages.items():
+                if threshold_low < value < threshold_high:
+                    flags.append(f"✅ {chakra.title()} is well-balanced ({value:.1f}%)")
+                elif value < threshold_low:
+                    flags.append(f"🟧 Chakra suppression: {chakra.replace('_', ' ').title()} is unusually low.")
+                elif value > threshold_high:
+                    flags.append(f"🟨 Chakra over stimulation: {chakra.replace('_', ' ').title()} is dominating.")
 
         # Only run complex pattern checks if total energy exceeds noise threshold
-        if total_energy > 30000:  # <-- adjust this value based on your noise floor
+        if total_energy > 200000:  # <-- adjust this value based on your noise floor
 
             # Complex Pattern-Based Flags
             if filtered_chakra_percentages.get('root', 0) > 25 and all(
@@ -148,15 +156,15 @@ class AudioVisualizerApp:
                     "🟥 This audio overstimulates survival instincts while suppressing emotional and spiritual centers.")
 
             if all(filtered_chakra_percentages.get(c, 0) < threshold_low for c in ['heart', 'throat']):
-                flags.append("🟧 This track may dampen heart and communication centers due to tonal compression.")
+                flags.append("🟧 Dampen heart and communication centers.")  # due to tonal compression.")
 
             if filtered_chakra_percentages.get('crown', 0) < 3 and filtered_chakra_percentages.get('third_eye', 0) < 3:
-                flags.append("🟨 Audio may dull intuitive and cognitive energy. Prolonged exposure not recommended.")
+                flags.append("🟨 Dull intuitive and cognitive energy")  # . Prolonged exposure not recommended.")
 
             if max(frequencies) > 10000 and total_energy > 0 and sum(amplitudes[frequencies > 10000]) > 0.3 * total_energy:
                 flags.append(
-                    "🟥 High-frequency content may cause stress or anxiety while failing to activate any energy "
-                    "centers.")
+                    "🟥 High-frequency content may cause stress or anxiety.")  # while failing to activate any energy "
+                    # "centers.")
 
         if debug:
             print(f"Total Energy: {total_energy}")
@@ -488,6 +496,13 @@ class AudioVisualizerApp:
                 data = self.audio.read_data()
                 freqs, mag = compute_fft(data, self.sample_rate)
                 collected_mags.append(mag)
+                self.baseline_fft = mag
+
+                # Compute total energy in chakra range during calibration
+                chakra_freq_mask = (freqs >= 20) & (freqs <= 1200)
+                self.baseline_energy = float(np.sum(mag[chakra_freq_mask]))
+                print(f"[Calibration] Baseline chakra energy: {self.baseline_energy:.2f}")
+
                 self.root.after(30, lambda: collect_frame(i + 1))
             except Exception as e:
                 log_to_gui(self.log_text, f"Calibration failed: {e}")
@@ -542,7 +557,7 @@ class AudioVisualizerApp:
 
             # Only analyze if the total energy exceeds a noise threshold
             energy = np.sum(adjusted_mag)
-            noise_floor = 50000  # You can tune this based on real-world quiet room FFT
+            noise_floor = 3000  # You can tune this based on real-world quiet room FFT
 
             if energy > noise_floor:
                 balance = self.analyze_chakra_energy_balance(freqs, adjusted_mag)

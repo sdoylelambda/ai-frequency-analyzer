@@ -89,3 +89,7 @@ def run_diagnostic_tone_tests():
         print("\n🛑 Test interrupted.")
 
     print("\n✅ Diagnostic test suite finished.")
+
+
+run_diagnostic_tone_tests()
+
