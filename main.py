@@ -91,7 +91,7 @@ class AudioVisualizerApp:
             'crown': (900, 1200)
         }
 
-        min_chakra_pct = 20.0  # Ignore chakras below this percentage -- adjustable var - add to GUI
+        min_chakra_pct = 5.0  # Ignore chakras below this percentage -- adjustable var - add to GUI
 
         chakra_energy = {}
         total_energy = 0
@@ -102,14 +102,6 @@ class AudioVisualizerApp:
             energy = np.sum(amplitudes[mask])
             chakra_energy[chakra] = energy
             total_energy += energy
-
-        if total_energy == 0:
-            return {
-                "chakra_energies": {k: 0 for k in chakra_bands},
-                "balance_score": 0.0,
-                "flags": ["🔴 No signal detected in chakra range."]
-            }
-
 
         # Normalize
         chakra_percentages = {
@@ -122,6 +114,13 @@ class AudioVisualizerApp:
             chakra: pct for chakra, pct in chakra_percentages.items()
             if pct >= min_chakra_pct
         }
+
+        if total_energy == 0:
+            return {
+                "chakra_energies": {k: 0 for k in filtered_chakra_percentages},
+                "balance_score": 0.0,
+                "flags": ["🔴 No signal detected in chakra range."]
+            }
 
         energy_values = np.array(list(filtered_chakra_percentages.values()))
         std_dev = np.std(energy_values)
@@ -231,41 +230,41 @@ class AudioVisualizerApp:
                 summary.append(f"🔹 {chakra.capitalize()} ({count} hits): {effect}")
         return "\n".join(summary) if summary else "No active chakra hits detected."
 
-    def generate_paragraph_review(self):
-        if not self.frequency_counts:
-            return "No chakra data available yet.", {}
-
-        sorted_chakras = sorted(
-            self.frequency_counts.items(), key=lambda x: x[1], reverse=True
-        )
-
-        best = [ch for ch, cnt in sorted_chakras if cnt >= 5]
-        moderate = [ch for ch, cnt in sorted_chakras if 2 <= cnt < 5]
-        trace = [ch for ch, cnt in sorted_chakras if cnt == 1]
-
-        lines = []
-
-        if best:
-            effects = [CHAKRA_EFFECTS.get(ch, "") for ch in best if CHAKRA_EFFECTS.get(ch, "")]
-            effect_str = ", ".join(effects) if effects else "varied energetic responses"
-            lines.append("🟢 Strong activation in: " + ", ".join(best).title() +
-                         f" — suggesting: {effect_str}.")
-        if moderate:
-            effects = [CHAKRA_EFFECTS.get(ch, "") for ch in moderate if CHAKRA_EFFECTS.get(ch, "")]
-            effect_str = ", ".join(effects) if effects else "moderate energetic influences"
-            lines.append("🟡 Moderate presence of: " + ", ".join(moderate).title() +
-                         f", possibly indicating: {effect_str}.")
-        if trace:
-            effects = [CHAKRA_EFFECTS.get(ch, "") for ch in trace if CHAKRA_EFFECTS.get(ch, "")]
-            effect_str = ", ".join(effects) if effects else "subtle signals"
-            lines.append("🔵 Trace signals in: " + ", ".join(trace).title() +
-                         f", may reflect: {effect_str}.")
-
-        if not lines:
-            lines.append("No significant chakra activation was detected.")
-
-        paragraph = "\n\n".join(lines)
-        return paragraph, dict(sorted_chakras)
+    # def generate_paragraph_review(self):    Now show review below
+    #     if not self.frequency_counts:
+    #         return "No chakra data available yet.", {}
+    #
+    #     sorted_chakras = sorted(
+    #         self.frequency_counts.items(), key=lambda x: x[1], reverse=True
+    #     )
+    #
+    #     best = [ch for ch, cnt in sorted_chakras if cnt >= 5]
+    #     moderate = [ch for ch, cnt in sorted_chakras if 2 <= cnt < 5]
+    #     trace = [ch for ch, cnt in sorted_chakras if cnt == 1]
+    #
+    #     lines = []
+    #
+    #     if best:
+    #         effects = [CHAKRA_EFFECTS.get(ch, "") for ch in best if CHAKRA_EFFECTS.get(ch, "")]
+    #         effect_str = ", ".join(effects) if effects else "varied energetic responses"
+    #         lines.append("🟢 Strong activation in: " + ", ".join(best).title() +
+    #                      f" — suggesting: {effect_str}.")
+    #     if moderate:
+    #         effects = [CHAKRA_EFFECTS.get(ch, "") for ch in moderate if CHAKRA_EFFECTS.get(ch, "")]
+    #         effect_str = ", ".join(effects) if effects else "moderate energetic influences"
+    #         lines.append("🟡 Moderate presence of: " + ", ".join(moderate).title() +
+    #                      f", possibly indicating: {effect_str}.")
+    #     if trace:
+    #         effects = [CHAKRA_EFFECTS.get(ch, "") for ch in trace if CHAKRA_EFFECTS.get(ch, "")]
+    #         effect_str = ", ".join(effects) if effects else "subtle signals"
+    #         lines.append("🔵 Trace signals in: " + ", ".join(trace).title() +
+    #                      f", may reflect: {effect_str}.")
+    #
+    #     if not lines:
+    #         lines.append("No significant chakra activation was detected.")
+    #
+    #     paragraph = "\n\n".join(lines)
+    #     return paragraph, dict(sorted_chakras)
 
     def show_review(self):
         summary_text, _ = self.generate_review()
