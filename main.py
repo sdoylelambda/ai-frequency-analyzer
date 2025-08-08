@@ -290,6 +290,52 @@ class AudioVisualizerApp:
 
         # Generate paragraph summary
         balance_lines = []
+
+        # Checks if 440hz or 432hz
+        tuning = self.detect_tuning(freqs, mags, debug=False)
+        balance["tuning"] = tuning
+
+        # safe extraction of percent-of-total for our two targets
+        targets = tuning.get("targets", {})
+        pct432 = float(targets.get("432Hz", {}).get("pct_of_total", 0.0))
+        pct440 = float(targets.get("440Hz", {}).get("pct_of_total", 0.0))
+
+        # Sum of energy in the two target windows (percent of total energy)
+        sum_target_pct = pct432 + pct440
+
+        # Prepare human-friendly tuning message
+        if sum_target_pct <= 0:
+            tuning_message = "No measurable energy at 432 Hz or 440 Hz."
+        else:
+            # Normalize to 100% across the two candidates so we can express 'chance' between them
+            norm432 = (pct432 / sum_target_pct) * 100.0 if sum_target_pct > 0 else 0.0
+            norm440 = (pct440 / sum_target_pct) * 100.0 if sum_target_pct > 0 else 0.0
+
+            # Decide if either candidate is strong enough to call 'likely' (use 50% threshold here)
+            if max(pct432, pct440) >= 50.0:
+                # One candidate is >=50% of total energy -> report as likely, show relative split
+                if pct432 > pct440:
+                    tuning_message = f"There is a {norm432:.0f}% chance this is 432 Hz and a {norm440:.0f}% chance it's 440 Hz (432Hz: {pct432:.2f}% of total energy)."
+                else:
+                    tuning_message = f"There is a {norm440:.0f}% chance this is 440 Hz and a {norm432:.0f}% chance it's 432 Hz (440Hz: {pct440:.2f}% of total energy)."
+            else:
+                # Neither candidate reaches the 50% threshold -> low confidence, likely other tuning
+                tuning_message = (
+                    f"Low confidence on tuning: {norm432:.0f}% vs {norm440:.0f}% between 432Hz and 440Hz "
+                    f"(432Hz: {pct432:.2f}% of total energy, 440Hz: {pct440:.2f}% of total energy). "
+                    "Likely in some other tuning unless one of these exceeds 50%."
+                )
+
+        # Insert the tuning message near the top of the paragraph summary (or wherever you prefer)
+        # e.g., insert at start of balance_lines so it appears first
+        balance_lines.insert(0, f"🎵 Tuning check: {tuning_message}")
+
+        # Also optionally add a flag (so it's visible in the flags section)
+        flags = balance.get("flags", []) or []
+        flags.insert(0, f"🎵 {tuning_message}")
+        balance["flags"] = flags
+
+        # Chakra Review
         sorted_chakras = sorted(
             balance["chakra_energies"].items(), key=lambda x: x[1], reverse=True
         )
@@ -453,6 +499,109 @@ class AudioVisualizerApp:
     #             ).pack(anchor="w", padx=20, pady=2)
     #
     #     Button(popup, text="Close", command=popup.destroy).pack(pady=10)
+
+    def detect_tuning(self,
+                      frequencies,
+                      amplitudes,
+                      targets=(432.0, 440.0),
+                      tolerance_hz=1.0,
+                      min_pct_for_detection=1.0,
+                      debug=False):
+        """
+        Detect presence of tuning tones (e.g., 432Hz / 440Hz) by summing energy
+        inside a small window around each target frequency.
+
+        Returns a dict:
+            {
+                "targets": {
+                    "432Hz": {"energy": float, "pct_of_total": float, "window": (low, high)},
+                    "440Hz": {...}
+                },
+                "detected": "432Hz" | "440Hz" | None,
+                "bin_width": float,
+                "used_tolerance": float,
+                "min_pct_for_detection": float,
+                "total_energy": float
+            }
+
+        Notes:
+        - tolerance_hz is a suggested tolerance; the function will ensure the
+          actual tolerance is at least half the FFT bin width (median diff of freqs).
+        - pct_of_total is percent of total energy across all finite frequency bins.
+        """
+        freqs = np.asarray(frequencies, dtype=float)
+        amps = np.asarray(amplitudes, dtype=float)
+
+        # Basic validation
+        if freqs.shape != amps.shape:
+            raise ValueError(f"frequencies and amplitudes must have same shape: {freqs.shape} != {amps.shape}")
+
+        # Handle empty input
+        if freqs.size == 0:
+            return {
+                "targets": {},
+                "detected": None,
+                "bin_width": 0.0,
+                "used_tolerance": tolerance_hz,
+                "min_pct_for_detection": min_pct_for_detection,
+                "total_energy": 0.0
+            }
+
+        # Mask out non-finite frequency rows; zero-out non-finite amps to avoid NaN propagation
+        finite_freq_mask = np.isfinite(freqs)
+        amps = np.where(np.isfinite(amps), amps, 0.0)
+
+        # Compute total energy over finite-frequency bins
+        total_energy = float(np.nansum(amps[finite_freq_mask]))
+
+        # Estimate bin width using median diff of freqs (only on finite freqs)
+        finite_freqs = freqs[finite_freq_mask]
+        if finite_freqs.size <= 1:
+            bin_width = float(tolerance_hz)
+        else:
+            diffs = np.diff(finite_freqs)
+            # ignore any non-finite diffs just in case
+            diffs = diffs[np.isfinite(diffs)]
+            bin_width = float(np.median(diffs)) if diffs.size > 0 else float(tolerance_hz)
+
+        # Ensure tolerance respects at least half a bin
+        used_tol = max(float(tolerance_hz), bin_width / 2.0)
+
+        results = {}
+        for t in targets:
+            low = float(t) - used_tol
+            high = float(t) + used_tol
+            mask = (freqs >= low) & (freqs <= high) & finite_freq_mask
+            energy = float(np.nansum(amps[mask]))
+            pct_of_total = (energy / total_energy) * 100.0 if total_energy > 0 else 0.0
+            results[f"{int(round(t))}Hz"] = {
+                "energy": energy,
+                "pct_of_total": pct_of_total,
+                "window": (low, high)
+            }
+            if debug:
+                print(
+                    f"[tuning] {int(round(t))}Hz window {low:.3f}-{high:.3f} Hz -> energy={energy:.6f}, pct={pct_of_total:.4f}%",
+                    flush=True)
+
+        # Decide which tuning (if any) qualifies
+        best_name, best_data = max(results.items(), key=lambda kv: kv[1]["pct_of_total"]) if results else (None, None)
+        detected = best_name if (
+                    best_data is not None and best_data["pct_of_total"] >= float(min_pct_for_detection)) else None
+
+        tuning_info = {
+            "targets": results,
+            "detected": detected,
+            "bin_width": bin_width,
+            "used_tolerance": used_tol,
+            "min_pct_for_detection": float(min_pct_for_detection),
+            "total_energy": total_energy
+        }
+
+        if debug:
+            print("Tuning detection summary:", tuning_info, flush=True)
+
+        return tuning_info
 
     def start_visualization(self):
         self.audio.open_stream()
