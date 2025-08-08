@@ -25,7 +25,7 @@ CHAKRA_EFFECTS = {
 
 class AudioVisualizerApp:
     def __init__(self, root):
-        self.min_energy_for_flags = 3000  # or another reasonable threshold value
+        self.min_energy_for_flags = 10000  # or another reasonable threshold value
         self.root = root
         self.root.title("Cymatics Frequency Analyzer")
 
@@ -91,7 +91,7 @@ class AudioVisualizerApp:
             'crown': (900, 1200)
         }
 
-        min_chakra_pct = 5.0  # Ignore chakras below this percentage
+        min_chakra_pct = 20.0  # Ignore chakras below this percentage -- adjustable var - add to GUI
 
         chakra_energy = {}
         total_energy = 0
@@ -136,15 +136,16 @@ class AudioVisualizerApp:
         #     min_energy_for_flags = 1.5 * getattr(self, "baseline_energy", 3000)  # fallback if baseline_energy missing
         # if debug:
         #     print("Min energy for flags:", min_energy_for_flags)
-        if total_energy < self.min_energy_for_flags:
+        if total_energy > self.min_energy_for_flags:
             # Individual Chakra Checks
             for chakra, value in filtered_chakra_percentages.items():
-                if threshold_low < value < threshold_high:
-                    flags.append(f"✅ {chakra.title()} is well-balanced ({value:.1f}%)")
-                elif value < threshold_low:
-                    flags.append(f"🟧 Chakra suppression: {chakra.replace('_', ' ').title()} is unusually low.")
-                elif value > threshold_high:
-                    flags.append(f"🟨 Chakra over stimulation: {chakra.replace('_', ' ').title()} is dominating.")
+                if value > 25:  # may need to adjust - perhaps make adjustable via GUI
+                    if threshold_low < value < threshold_high:
+                        flags.append(f"✅ {chakra.title()} is well-balanced ({value:.1f}%)")
+                    elif value < threshold_low:
+                        flags.append(f"🟧 Chakra suppression: {chakra.replace('_', ' ').title()} is unusually low.")
+                    elif value > threshold_high:
+                        flags.append(f"🟨 Chakra over stimulation: {chakra.replace('_', ' ').title()} is dominating.")
 
         # Only run complex pattern checks if total energy exceeds noise threshold
         if total_energy > 200000:  # <-- adjust this value based on your noise floor
@@ -550,18 +551,18 @@ class AudioVisualizerApp:
                 self.frequency_counts[label] += 1
                 self.counter_vars[label].set(f"{label}: {self.frequency_counts[label]}")
 
-        # ✅ Real-time chakra energy balance check
-        if self.calibrated:
-            self.latest_fft_freqs = freqs
-            self.latest_fft_mags = adjusted_mag
+            # ✅ Real-time chakra energy balance check
+            if self.calibrated:
+                self.latest_fft_freqs = freqs
+                self.latest_fft_mags = adjusted_mag
 
-            # Only analyze if the total energy exceeds a noise threshold
-            energy = np.sum(adjusted_mag)
-            noise_floor = 3000  # You can tune this based on real-world quiet room FFT
+                # Only analyze if the total energy exceeds a noise threshold
+                energy = np.sum(adjusted_mag)
+                noise_floor = 3000  # You can tune this based on real-world quiet room FFT
 
-            if energy > noise_floor:
-                balance = self.analyze_chakra_energy_balance(freqs, adjusted_mag)
-                self.alert_chakra_flags(balance["flags"])
+                if energy > noise_floor:
+                    balance = self.analyze_chakra_energy_balance(freqs, adjusted_mag)
+                    self.alert_chakra_flags(balance["flags"])
 
         self.canvas.draw()
         self.root.after(50, self.animate)

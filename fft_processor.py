@@ -37,6 +37,7 @@ def is_harmonic(freq, base_freqs, tolerance=2.0):
             return True
     return False
 
+
 # thinking .125-.15 threshold
 def detect_peaks(freqs, magnitude, threshold=200000, match_rate_threshold=0.125, debug=True):  # threshold=10000 match_rate_threshold=0.5
     """Detect base frequency peaks from FFT data with harmonic suppression and match rate gating."""
