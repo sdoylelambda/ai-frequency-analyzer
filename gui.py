@@ -100,8 +100,8 @@ def build_gui(root, fig, start_callback, stop_callback, calibrate_silence):
     status_label.grid(row=3, column=0, columnspan=2, padx=10, pady=0)
 
     # === Log Box ===
-    log_text = tk.Text(root, height=10, width=50, wrap=tk.WORD)
-    log_text.grid(row=5, column=0, columnspan=2, padx=10, pady=10)
+    log_text = tk.Text(root, height=20, width=100, wrap=tk.WORD)
+    log_text.grid(row=5, column=0, columnspan=2, padx=0, pady=0)
     log_text.config(state=tk.DISABLED)
 
     # === Alert Box ===
