@@ -292,48 +292,91 @@ class AudioVisualizerApp:
         balance_lines = []
 
         # Checks if 440hz or 432hz
+        # --- tuning: result from self.detect_tuning(freqs, mags, debug=False) ---
         tuning = self.detect_tuning(freqs, mags, debug=False)
         balance["tuning"] = tuning
 
-        # safe extraction of percent-of-total for our two targets
         targets = tuning.get("targets", {})
         pct432 = float(targets.get("432Hz", {}).get("pct_of_total", 0.0))
         pct440 = float(targets.get("440Hz", {}).get("pct_of_total", 0.0))
-
-        # Sum of energy in the two target windows (percent of total energy)
         sum_target_pct = pct432 + pct440
 
-        # Prepare human-friendly tuning message
+        # Normalized (relative) percentages between the two candidates
+        if sum_target_pct > 0:
+            norm432 = (pct432 / sum_target_pct) * 100.0
+            norm440 = (pct440 / sum_target_pct) * 100.0
+        else:
+            norm432 = norm440 = 0.0
+
+        # Decision thresholds (tweak these to taste)
+        ABS_MIN_PCT = 1.0  # candidate must be >=1% of total energy to be considered "strong"
+        REL_MIN_PCT = 75.0  # candidate must be >=75% of the two-target energy to be strongly dominant
+        SNR_DB_MIN = 6.0  # optional: require ~6 dB SNR (set to None to disable SNR check)
+
+        # helper to compute simple SNR for a target window (peak vs median)
+        def _compute_peak_snr_db(freqs, mags, low, high):
+            mask = (freqs >= low) & (freqs <= high) & np.isfinite(freqs)
+            if not np.any(mask):
+                return None, 0.0  # no data in window
+            peak = float(np.nanmax(mags[mask]))
+            # background - use median of full finite mags as a simple baseline
+            bg = float(np.nanmedian(mags[np.isfinite(mags)])) if np.any(np.isfinite(mags)) else 0.0
+            eps = 1e-12
+            snr_db = 10.0 * np.log10((peak + eps) / (bg + eps)) if bg > 0 else None
+            return snr_db, peak
+
+        # Determine dominant candidate and SNRs (if freqs/mags available)
+        dominant_name = "432Hz" if pct432 > pct440 else "440Hz"
+        dominant_pct = max(pct432, pct440)
+        dominant_norm = max(norm432, norm440)
+
+        # Optionally compute SNR for dominant window (needs raw arrays)
+        snr_ok = True
+        snr_info = {}
+        if 'bin_width' in tuning and freqs is not None and mags is not None:
+            used_tol = tuning.get("used_tolerance", tuning.get("bin_width", 1.0))
+            tval = 432.0 if dominant_name == "432Hz" else 440.0
+            low = tval - used_tol
+            high = tval + used_tol
+            snr_db, peak_amp = _compute_peak_snr_db(np.asarray(freqs), np.asarray(mags), low, high)
+            snr_info = {"snr_db": snr_db, "peak_amp": peak_amp, "window": (low, high)}
+            if SNR_DB_MIN is not None and snr_db is not None:
+                snr_ok = snr_db >= SNR_DB_MIN
+
+        # Combined decision rules
         if sum_target_pct <= 0:
             tuning_message = "No measurable energy at 432 Hz or 440 Hz."
+            confidence_level = "none"
+        elif dominant_pct >= ABS_MIN_PCT and dominant_norm >= REL_MIN_PCT and snr_ok:
+            # strong absolute + relative + (optional) SNR -> confident
+            tuning_message = (
+                f"Confident match: {dominant_name} — {dominant_pct:.2f}% of total energy "
+                f"({dominant_norm:.0f}% vs other candidate)."
+            )
+            confidence_level = "high"
+        elif dominant_pct >= ABS_MIN_PCT and dominant_norm >= (REL_MIN_PCT * 0.6):
+            # decent absolute + moderate relative -> likely
+            tuning_message = (
+                f"Likely {dominant_name} ({dominant_pct:.2f}% of total energy, "
+                f"{dominant_norm:.0f}% relative between candidates)."
+            )
+            confidence_level = "medium"
         else:
-            # Normalize to 100% across the two candidates so we can express 'chance' between them
-            norm432 = (pct432 / sum_target_pct) * 100.0 if sum_target_pct > 0 else 0.0
-            norm440 = (pct440 / sum_target_pct) * 100.0 if sum_target_pct > 0 else 0.0
+            # low absolute energy -> low confidence even if relative split looks big
+            tuning_message = (
+                f"Low confidence on tuning: {norm432:.0f}% vs {norm440:.0f}% between 432Hz and 440Hz "
+                f"(432Hz: {pct432:.2f}% of total energy, 440Hz: {pct440:.2f}% of total energy). "
+                "Likely in some other tuning unless one candidate grows above the threshold."
+            )
+            confidence_level = "low"
 
-            # Decide if either candidate is strong enough to call 'likely' (use 50% threshold here)
-            if max(pct432, pct440) >= 50.0:
-                # One candidate is >=50% of total energy -> report as likely, show relative split
-                if pct432 > pct440:
-                    tuning_message = f"There is a {norm432:.0f}% chance this is 432 Hz and a {norm440:.0f}% chance it's 440 Hz (432Hz: {pct432:.2f}% of total energy)."
-                else:
-                    tuning_message = f"There is a {norm440:.0f}% chance this is 440 Hz and a {norm432:.0f}% chance it's 432 Hz (440Hz: {pct440:.2f}% of total energy)."
-            else:
-                # Neither candidate reaches the 50% threshold -> low confidence, likely other tuning
-                tuning_message = (
-                    f"Low confidence on tuning: {norm432:.0f}% vs {norm440:.0f}% between 432Hz and 440Hz "
-                    f"(432Hz: {pct432:.2f}% of total energy, 440Hz: {pct440:.2f}% of total energy). "
-                    "Likely in some other tuning unless one of these exceeds 50%."
-                )
-
-        # Insert the tuning message near the top of the paragraph summary (or wherever you prefer)
-        # e.g., insert at start of balance_lines so it appears first
-        balance_lines.insert(0, f"🎵 Tuning check: {tuning_message}")
-
-        # Also optionally add a flag (so it's visible in the flags section)
+        # attach additional info for UI / logging
         flags = balance.get("flags", []) or []
         flags.insert(0, f"🎵 {tuning_message}")
         balance["flags"] = flags
+        balance["tuning_message"] = tuning_message
+        balance["tuning_confidence"] = confidence_level
+        balance["tuning_snr_info"] = snr_info
 
         # Chakra Review
         sorted_chakras = sorted(
