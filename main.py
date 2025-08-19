@@ -1,7 +1,7 @@
 import tkinter as tk
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import re
 
 from audio_stream import AudioStream
 from fft_processor import compute_fft, detect_peaks
@@ -25,6 +25,7 @@ CHAKRA_EFFECTS = {
 
 class AudioVisualizerApp:
     def __init__(self, root):
+        self.latest_peaks = None
         self.min_energy_for_flags = 10000  # or another reasonable threshold value
         self.root = root
         self.root.title("Cymatics Frequency Analyzer")
@@ -80,115 +81,77 @@ class AudioVisualizerApp:
 
     # Move these to Utils folder/file
 
-    def analyze_chakra_energy_balance(self, frequencies, amplitudes, debug=True):
-        chakra_bands = {
-            'root': (20, 60),
-            'sacral': (60, 120),
-            'solar_plexus': (120, 250),
-            'heart': (250, 400),
-            'throat': (400, 600),
-            'third_eye': (600, 900),
-            'crown': (900, 1200)
-        }
+    def analyze_chakra_energy_balance(self, peaks, debug=True):
+        """
+        Analyze chakra balance using already-detected peaks.
+        Peaks format: [(freq, mag, label, color), ...]
+        """
 
-        min_chakra_pct = 5.0  # Ignore chakras below this percentage -- adjustable var - add to GUI
+        if not peaks:
+            return {
+                "chakra_energies": {},
+                "balance_score": 0.0,
+                "flags": ["🔴 No peaks detected."]
+            }
 
+        # --- Aggregate energy by chakra (using the label from peaks) ---
         chakra_energy = {}
-        total_energy = 0
+        total_energy = 0.0
 
-        # Calculate energy in each chakra band
-        for chakra, (low, high) in chakra_bands.items():
-            mask = (frequencies >= low) & (frequencies < high)
-            energy = np.sum(amplitudes[mask])
-            chakra_energy[chakra] = energy
-            total_energy += energy
+        for freq, mag, label, color in peaks:
+            # normalize label (strip Hz info, keep chakra if present)
+            chakra = None
+            if "Chakra" in label:
+                chakra = label.split("–")[-1].strip().lower()  # e.g. "Heart Chakra (4th)" -> "heart chakra (4th)"
+                # optionally map to just root/sacral/etc if needed
+                chakra = chakra.split()[0]  # keep just the first word like "heart"
+            else:
+                continue  # skip non-chakra peaks if you want strictly chakra bands
 
-        # Normalize
+            chakra_energy[chakra] = chakra_energy.get(chakra, 0) + mag
+            total_energy += mag
+
+        if total_energy == 0:
+            return {
+                "chakra_energies": {c: 0 for c in chakra_energy},
+                "balance_score": 0.0,
+                "flags": ["🔴 No chakra energy detected."]
+            }
+
+        # --- Normalize to percentages ---
         chakra_percentages = {
             chakra: round((energy / total_energy) * 100, 2)
             for chakra, energy in chakra_energy.items()
         }
 
-        # Remove chakras that don't meet threshold (optional)
-        filtered_chakra_percentages = {
-            chakra: pct for chakra, pct in chakra_percentages.items()
-            if pct >= min_chakra_pct
-        }
-
-        if total_energy == 0:
-            return {
-                "chakra_energies": {k: 0 for k in filtered_chakra_percentages},
-                "balance_score": 0.0,
-                "flags": ["🔴 No signal detected in chakra range."]
-            }
-
-        energy_values = np.array(list(filtered_chakra_percentages.values()))
-        std_dev = np.std(energy_values)
+        # --- Balance score ---
+        energy_values = list(chakra_percentages.values())
+        std_dev = np.std(energy_values) if energy_values else 0
         balance_score = round(1.0 - min(std_dev / 40.0, 1.0), 2)
 
+        # --- Flags ---
         flags = []
         threshold_low = 5
-        threshold_high = 30
+        threshold_high = 40
 
-        # ⚠️ Add energy guard here using the dynamically passed min_energy_for_flags
-        # if self.min_energy_for_flags is None:
-        #     min_energy_for_flags = 1.5 * getattr(self, "baseline_energy", 3000)  # fallback if baseline_energy missing
-        # if debug:
-        #     print("Min energy for flags:", min_energy_for_flags)
-        if total_energy > self.min_energy_for_flags:
-            # Individual Chakra Checks
-            for chakra, value in filtered_chakra_percentages.items():
-                if value > 25:  # may need to adjust - perhaps make adjustable via GUI
-                    if threshold_low < value < threshold_high:
-                        flags.append(f"✅ {chakra.title()} is well-balanced ({value:.1f}%)")
-                    elif value < threshold_low:
-                        flags.append(f"🟧 Chakra suppression: {chakra.replace('_', ' ').title()} is unusually low.")
-                    elif value > threshold_high:
-                        flags.append(f"🟨 Chakra over stimulation: {chakra.replace('_', ' ').title()} is dominating.")
-
-        # Only run complex pattern checks if total energy exceeds noise threshold
-        if total_energy > 200000:  # <-- adjust this value based on your noise floor
-
-            # Complex Pattern-Based Flags
-            if filtered_chakra_percentages.get('root', 0) > 25 and all(
-                    filtered_chakra_percentages.get('c', 0) < 10 for c in ['heart', 'throat', 'third_eye', 'crown']):
-                flags.append(
-                    "🟥 This audio overstimulates survival instincts while suppressing emotional and spiritual centers.")
-
-            if all(filtered_chakra_percentages.get(c, 0) < threshold_low for c in ['heart', 'throat']):
-                flags.append("🟧 Dampen heart and communication centers.")  # due to tonal compression.")
-
-            if filtered_chakra_percentages.get('crown', 0) < 3 and filtered_chakra_percentages.get('third_eye', 0) < 3:
-                flags.append("🟨 Dull intuitive and cognitive energy")  # . Prolonged exposure not recommended.")
-
-            if max(frequencies) > 10000 and total_energy > 0 and sum(amplitudes[frequencies > 10000]) > 0.3 * total_energy:
-                flags.append(
-                    "🟥 High-frequency content may cause stress or anxiety.")  # while failing to activate any energy "
-                    # "centers.")
-
-        if debug:
-            print(f"Total Energy: {total_energy}")
-            print("Filtered Chakra %:", filtered_chakra_percentages)
-
-        # Placeholder NLP-based flag (can be linked to actual speech emotion detection results)
-        # You can toggle this from your NLP results if applicable
-        # Example: if emotional_disconnection_score > 0.7:
-        # flags.append("🟨 Speech pattern shows signs of emotional disconnection.
-        # May lead to low-vibration entrainment.")
-        if 'speech_analysis_trigger' in chakra_energy:  # placeholder for future integration
-            flags.append(
-                "🟨 Speech pattern shows signs of emotional disconnection. May lead to low-vibration entrainment.")
+        for chakra, pct in chakra_percentages.items():
+            if threshold_low < pct < threshold_high:
+                flags.append(f"✅ {chakra.title()} is well-balanced ({pct:.1f}%)")
+            elif pct <= threshold_low:
+                flags.append(f"🟧 {chakra.title()} is unusually low ({pct:.1f}%).")
+            elif pct >= threshold_high:
+                flags.append(f"🟨 {chakra.title()} is dominating ({pct:.1f}%).")
 
         if balance_score < 0.5:
             flags.append("🔺 Energy distribution is imbalanced. Consider grounding or focusing techniques.")
 
         if debug:
-            print("Chakra %:", filtered_chakra_percentages)
+            print("Chakra %:", chakra_percentages)
             print("Balance score:", balance_score)
             print("Flags:", flags)
 
         return {
-            "chakra_energies": filtered_chakra_percentages,
+            "chakra_energies": chakra_percentages,
             "balance_score": balance_score,
             "flags": flags
         }
@@ -266,6 +229,26 @@ class AudioVisualizerApp:
     #     paragraph = "\n\n".join(lines)
     #     return paragraph, dict(sorted_chakras)
 
+    def build_paragraph_summary(self, chakra_energies):
+        """
+        Turn chakra_energies dict into a narrative paragraph.
+        Example: { 'Heart Chakra': 22.0, 'Solar Plexus': 5.0, ... }
+        """
+        if not chakra_energies:
+            return "No significant chakra activity was detected during this session."
+
+        parts = []
+        for chakra, pct in sorted(chakra_energies.items(), key=lambda x: x[1], reverse=True):
+            if pct >= 20:
+                parts.append(f"your {chakra} is strongly activated at about {pct:.1f}%.")
+            elif pct >= 10:
+                parts.append(f"your {chakra} shows a moderate presence around {pct:.1f}%.")
+            elif pct > 0:
+                parts.append(f"there is a subtle trace of {chakra} activity ({pct:.1f}%).")
+
+        paragraph = "Overall, " + " ".join(parts)
+        return paragraph[0].upper() + paragraph[1:]
+
     def show_review(self):
         summary_text, _ = self.generate_review()
 
@@ -275,137 +258,177 @@ class AudioVisualizerApp:
         else:
             self.log_message("No chakra hits detected yet.")
 
-        # Run energy balance analysis (if FFT data exists)
+        # --- Gather cached data ---
+        peaks = getattr(self, "latest_peaks", []) or []
         freqs = getattr(self, "latest_fft_freqs", None)
         mags = getattr(self, "latest_fft_mags", None)
 
-        if freqs is not None and mags is not None and len(freqs) == len(mags):
-            balance = self.analyze_chakra_energy_balance(freqs, mags)
+        # --- Primary: analyze from peaks ---
+        if len(peaks) > 0:
+            balance = self.analyze_chakra_energy_balance(peaks)
         else:
-            balance = {
-                "chakra_energies": {},
-                "balance_score": 0.0,
-                "flags": ["⚠️ No valid FFT data available."]
-            }
+            # --- Fallback: synthesize percentages from frequency_counts (if any) ---
+            counts = getattr(self, "frequency_counts", {}) or {}
+            nonzero = {k: v for k, v in counts.items() if v > 0}
+            if nonzero:
+                total = sum(nonzero.values())
+                chakra_energies = {k: round((v / total) * 100.0, 2) for k, v in nonzero.items()}
+                balance = {
+                    "chakra_energies": chakra_energies,
+                    "balance_score": 0.0,
+                    "flags": ["ℹ️ Using hit-count fallback (no peaks cached this frame)."]
+                }
+            else:
+                balance = {
+                    "chakra_energies": {},
+                    "balance_score": 0.0,
+                    "flags": ["⚠️ No peaks available for review."]
+                }
 
-        # Generate paragraph summary
+        # --- Tuning analysis (432 vs 440) if FFT available ---
+        if freqs is not None and mags is not None:
+            tuning = self.detect_tuning(freqs, mags, debug=False)
+
+            # pull percentages (support both your schemas)
+            pct432 = tuning.get("pct432", tuning.get("targets", {}).get("432Hz", {}).get("pct_of_total", 0.0))
+            pct440 = tuning.get("pct440", tuning.get("targets", {}).get("440Hz", {}).get("pct_of_total", 0.0))
+            sum_target_pct = pct432 + pct440
+
+            # Normalized relative percentages
+            if sum_target_pct > 0:
+                norm432 = (pct432 / sum_target_pct) * 100.0
+                norm440 = (pct440 / sum_target_pct) * 100.0
+            else:
+                norm432 = norm440 = 0.0
+
+            # Decision thresholds
+            ABS_MIN_PCT = 1.0
+            REL_MIN_PCT = 75.0
+            SNR_DB_MIN = 6.0
+
+            # SNR helper
+            def _compute_peak_snr_db(freqs_, mags_, low, high):
+                mask = (freqs_ >= low) & (freqs_ <= high) & np.isfinite(freqs_)
+                if not np.any(mask):
+                    return None, 0.0
+                peak = float(np.nanmax(mags_[mask]))
+                bg = float(np.nanmedian(mags_[np.isfinite(mags_)])) if np.any(np.isfinite(mags_)) else 0.0
+                eps = 1e-12
+                snr_db = 10.0 * np.log10((peak + eps) / (bg + eps)) if bg > 0 else None
+                return snr_db, peak
+
+            # Determine dominant
+            dominant_name = "432Hz" if pct432 > pct440 else "440Hz"
+            dominant_pct = max(pct432, pct440)
+            dominant_norm = max(norm432, norm440)
+
+            snr_ok = True
+            snr_info = {}
+            if "bin_width" in tuning:
+                used_tol = tuning.get("used_tolerance", tuning.get("bin_width", 1.0))
+                tval = 432.0 if dominant_name == "432Hz" else 440.0
+                low = tval - used_tol
+                high = tval + used_tol
+                snr_db, peak_amp = _compute_peak_snr_db(np.asarray(freqs), np.asarray(mags), low, high)
+                snr_info = {"snr_db": snr_db, "peak_amp": peak_amp, "window": (low, high)}
+                if SNR_DB_MIN is not None and snr_db is not None:
+                    snr_ok = snr_db >= SNR_DB_MIN
+
+            # Apply decision rules
+            if sum_target_pct <= 0:
+                tuning_message = "No measurable energy at 432 Hz or 440 Hz."
+                confidence_level = "none"
+            elif dominant_pct >= ABS_MIN_PCT and dominant_norm >= REL_MIN_PCT and snr_ok:
+                tuning_message = (
+                    f"Confident match: {dominant_name} — {dominant_pct:.2f}% of total energy "
+                    f"({dominant_norm:.0f}% vs other candidate)."
+                )
+                confidence_level = "high"
+            elif dominant_pct >= ABS_MIN_PCT and dominant_norm >= (REL_MIN_PCT * 0.6):
+                tuning_message = (
+                    f"Likely {dominant_name} ({dominant_pct:.2f}% of total energy, "
+                    f"{dominant_norm:.0f}% relative between candidates)."
+                )
+                confidence_level = "medium"
+            else:
+                tuning_message = (
+                    f"Low confidence on tuning: {norm432:.0f}% vs {norm440:.0f}% between 432Hz and 440Hz "
+                    f"(432Hz: {pct432:.2f}% of total energy, 440Hz: {pct440:.2f}% of total energy). "
+                    "Likely in some other tuning unless one candidate grows above the threshold."
+                )
+                confidence_level = "low"
+
+            # Attach to balance & flags
+            flags = balance.get("flags", []) or []
+            flags.insert(0, f"🎵 {tuning_message}")
+            balance["flags"] = flags
+            balance["tuning_message"] = tuning_message
+            balance["tuning_confidence"] = confidence_level
+            balance["tuning_snr_info"] = snr_info
+
+        # --- Build Review Text ---
         balance_lines = []
 
-        # Checks if 440hz or 432hz
-        # --- tuning: result from self.detect_tuning(freqs, mags, debug=False) ---
-        tuning = self.detect_tuning(freqs, mags, debug=False)
-        balance["tuning"] = tuning
+        # --- Paragraph Summary ---
+        paragraph_summary = self.build_paragraph_summary(balance.get("chakra_energies", {}))
+        balance_lines.insert(0, "📝 Narrative Summary:\n" + paragraph_summary + "\n")
 
-        targets = tuning.get("targets", {})
-        pct432 = float(targets.get("432Hz", {}).get("pct_of_total", 0.0))
-        pct440 = float(targets.get("440Hz", {}).get("pct_of_total", 0.0))
-        sum_target_pct = pct432 + pct440
+        # Helper: extract the first frequency from a label to sort by Hz
+        def _extract_freq_from_label(text):
+            import re
+            m = re.search(r"(\d+(?:\.\d+)?)\s*hz", text, flags=re.I)
+            if not m:
+                m = re.search(r"\b(\d+(?:\.\d+)?)\b", text)
+            try:
+                return float(m.group(1)) if m else float("inf")
+            except Exception:
+                return float("inf")
 
-        # Normalized (relative) percentages between the two candidates
-        if sum_target_pct > 0:
-            norm432 = (pct432 / sum_target_pct) * 100.0
-            norm440 = (pct440 / sum_target_pct) * 100.0
-        else:
-            norm432 = norm440 = 0.0
-
-        # Decision thresholds (tweak these to taste)
-        ABS_MIN_PCT = 1.0  # candidate must be >=1% of total energy to be considered "strong"
-        REL_MIN_PCT = 75.0  # candidate must be >=75% of the two-target energy to be strongly dominant
-        SNR_DB_MIN = 6.0  # optional: require ~6 dB SNR (set to None to disable SNR check)
-
-        # helper to compute simple SNR for a target window (peak vs median)
-        def _compute_peak_snr_db(freqs, mags, low, high):
-            mask = (freqs >= low) & (freqs <= high) & np.isfinite(freqs)
-            if not np.any(mask):
-                return None, 0.0  # no data in window
-            peak = float(np.nanmax(mags[mask]))
-            # background - use median of full finite mags as a simple baseline
-            bg = float(np.nanmedian(mags[np.isfinite(mags)])) if np.any(np.isfinite(mags)) else 0.0
-            eps = 1e-12
-            snr_db = 10.0 * np.log10((peak + eps) / (bg + eps)) if bg > 0 else None
-            return snr_db, peak
-
-        # Determine dominant candidate and SNRs (if freqs/mags available)
-        dominant_name = "432Hz" if pct432 > pct440 else "440Hz"
-        dominant_pct = max(pct432, pct440)
-        dominant_norm = max(norm432, norm440)
-
-        # Optionally compute SNR for dominant window (needs raw arrays)
-        snr_ok = True
-        snr_info = {}
-        if 'bin_width' in tuning and freqs is not None and mags is not None:
-            used_tol = tuning.get("used_tolerance", tuning.get("bin_width", 1.0))
-            tval = 432.0 if dominant_name == "432Hz" else 440.0
-            low = tval - used_tol
-            high = tval + used_tol
-            snr_db, peak_amp = _compute_peak_snr_db(np.asarray(freqs), np.asarray(mags), low, high)
-            snr_info = {"snr_db": snr_db, "peak_amp": peak_amp, "window": (low, high)}
-            if SNR_DB_MIN is not None and snr_db is not None:
-                snr_ok = snr_db >= SNR_DB_MIN
-
-        # Combined decision rules
-        if sum_target_pct <= 0:
-            tuning_message = "No measurable energy at 432 Hz or 440 Hz."
-            confidence_level = "none"
-        elif dominant_pct >= ABS_MIN_PCT and dominant_norm >= REL_MIN_PCT and snr_ok:
-            # strong absolute + relative + (optional) SNR -> confident
-            tuning_message = (
-                f"Confident match: {dominant_name} — {dominant_pct:.2f}% of total energy "
-                f"({dominant_norm:.0f}% vs other candidate)."
-            )
-            confidence_level = "high"
-        elif dominant_pct >= ABS_MIN_PCT and dominant_norm >= (REL_MIN_PCT * 0.6):
-            # decent absolute + moderate relative -> likely
-            tuning_message = (
-                f"Likely {dominant_name} ({dominant_pct:.2f}% of total energy, "
-                f"{dominant_norm:.0f}% relative between candidates)."
-            )
-            confidence_level = "medium"
-        else:
-            # low absolute energy -> low confidence even if relative split looks big
-            tuning_message = (
-                f"Low confidence on tuning: {norm432:.0f}% vs {norm440:.0f}% between 432Hz and 440Hz "
-                f"(432Hz: {pct432:.2f}% of total energy, 440Hz: {pct440:.2f}% of total energy). "
-                "Likely in some other tuning unless one candidate grows above the threshold."
-            )
-            confidence_level = "low"
-
-        # attach additional info for UI / logging
-        flags = balance.get("flags", []) or []
-        flags.insert(0, f"🎵 {tuning_message}")
-        balance["flags"] = flags
-        balance["tuning_message"] = tuning_message
-        balance["tuning_confidence"] = confidence_level
-        balance["tuning_snr_info"] = snr_info
-
-        # Chakra Review
-        sorted_chakras = sorted(
-            balance["chakra_energies"].items(), key=lambda x: x[1], reverse=True
-        )
-        for chakra, pct in sorted_chakras:
+        # Chakra & frequency activations
+        energies = balance.get("chakra_energies", {})
+        items = []
+        for label, pct in energies.items():
             if pct >= 20:
-                balance_lines.append(
-                    f"✅ {chakra.capitalize()} is highly activated ({pct:.1f}%), suggesting strength in {CHAKRA_EFFECTS.get(chakra, 'that area')}.")
+                line = f"✅ {label} is highly activated ({pct:.1f}%)."
             elif pct >= 10:
-                balance_lines.append(f"ℹ️ {chakra.capitalize()} shows moderate engagement ({pct:.1f}%).")
+                line = f"ℹ️ {label} shows moderate engagement ({pct:.1f}%)."
             elif pct > 0:
-                balance_lines.append(f"☁️ {chakra.capitalize()} shows only subtle activation ({pct:.1f}%).")
+                line = f"☁️ {label} shows subtle activation ({pct:.1f}%)."
             else:
-                balance_lines.append(f"⚫ {chakra.capitalize()} was not detected.")
+                line = f"⚫ {label} was not detected."
 
-        balance_lines.append(f"\n🧭 Overall Energy Balance Score: {balance['balance_score'] * 10:.1f}/10")
-        if balance["flags"]:
+            # append hit count if tracked
+            hit_count = self.frequency_counts.get(label, 0) if hasattr(self, "frequency_counts") else 0
+            if hit_count > 0:
+                line += f" ({hit_count} detections)"
+
+            items.append((_extract_freq_from_label(label), line))
+
+        if items:
+            items.sort(key=lambda t: t[0])
+            balance_lines.append("📡 Chakra & Frequency Activations (by Hz):")
+            for _, line in items:
+                balance_lines.append(line)
+
+        # ✅ Always show balance score
+        balance_lines.append(f"\n🧭 Overall Energy Balance Score: {balance.get('balance_score', 0.0) * 10:.1f}/10")
+
+        # ✅ Also show tuning message inline (if present)
+        if "tuning_message" in balance:
+            balance_lines.append(f"\n🎵 Tuning Analysis: {balance['tuning_message']}")
+
+        # ✅ Observations / flags
+        if balance.get("flags"):
             balance_lines.append("\n⚠️ Observations:")
             balance_lines.extend(balance["flags"])
 
-        # Create pop-up window
+        # --- Pop-up Window ---
         popup = Toplevel(self.root)
         popup.title("Chakra Activation Review")
         popup.geometry("600x1000")
 
         Label(popup, text="🧘 Chakra Activation Summary", font=("Helvetica", 14, "bold")).pack(pady=10)
 
-        # --- SCROLLABLE TEXT WIDGET WITH PARAGRAPH & FLAG SUMMARY ---
         frame = Frame(popup)
         frame.pack(fill=BOTH, expand=True, padx=10, pady=5)
 
@@ -416,51 +439,74 @@ class AudioVisualizerApp:
         textbox.pack(side="left", fill=BOTH, expand=True)
         scrollbar.config(command=textbox.yview)
 
-        paragraph = "\n\n".join(balance_lines)
+        paragraph = "\n\n".join(balance_lines) if balance_lines else "No data available."
         textbox.insert("1.0", paragraph)
         textbox.config(state="disabled")
 
-        # --- Divider ---
         Label(popup, text="―" * 70, fg="gray").pack(pady=10)
 
-        # --- DETAILED PERCENTAGE REPORT ---
+        # Detailed percentages (same order as above)
         Label(popup, text="📐 Detailed Chakra Energy Percentages", font=("Helvetica", 12, "bold")).pack(pady=(5, 2))
-
-        for chakra, pct in balance["chakra_energies"].items():
-            Label(
-                popup,
-                text=f"{chakra.capitalize()}: {pct:.2f}%",
-                justify="left",
-                anchor="w",
-                font=("Helvetica", 10)
-            ).pack(anchor="w", padx=20)
-
-        Label(
-            popup,
-            text=f"\n🧭 Balance Score: {balance['balance_score'] * 10:.1f}/10",
-            font=("Helvetica", 11, "italic"),
-            fg="blue"
-        ).pack(pady=10)
-
-        # --- FLAGS SECTION (already in paragraph, but optional to repeat) ---
-        if balance["flags"]:
-            Label(popup, text="⚠️ Flags:", font=("Helvetica", 11, "bold")).pack(pady=(10, 0))
-            for flag in balance["flags"]:
-                Label(
-                    popup,
-                    text=flag,
-                    justify="left",
-                    anchor="w",
-                    wraplength=560,
-                    fg="red",
-                    font=("Helvetica", 9)
-                ).pack(anchor="w", padx=20, pady=2)
+        for _, line in items:
+            # extract label and pct from the built lines if you prefer, or just iterate energies again:
+            pass  # optional: you can keep your previous “detailed list” block here if you like.
 
         Button(popup, text="Close", command=popup.destroy).pack(pady=15)
 
+        # --- Chakra + Extra Frequency Hit Counts ---
+        # --- This is now redundant ---
+        # if hasattr(self, "frequency_counts") and self.frequency_counts:
+        #     balance_lines.append("\n📊 Frequency Hit Counts (Chakras + Specials):")
+        #
+        #     # Extract numeric frequency if possible for sorting
+        #     def extract_freq(label):
+        #         import re
+        #         match = re.search(r"(\d+(?:\.\d+)?)", label)
+        #         return float(match.group(1)) if match else float("inf")
+        #
+        #     sorted_counts = sorted(
+        #         ((label, count) for label, count in self.frequency_counts.items() if count > 0),
+        #         key=lambda x: extract_freq(x[0])
+        #     )
+        #
+        #     for label, count in sorted_counts:
+        #         balance_lines.append(f"   {label}: {count} detections")
+        #
+        #     # --- Debug Info ---
+        # balance_lines.append("\n--- DEBUG ---")
+        # balance_lines.append(f"Peaks count: {len(peaks)}")
+        # if freqs is not None:
+        #     balance_lines.append(f"FFT size: {len(freqs)}")
+        # balance_lines.append(f"432%: {pct432:.2f} | 440%: {pct440:.2f}")
+        # if "tuning_snr_info" in balance:
+        #     balance_lines.append(f"SNR info: {balance['tuning_snr_info']}")
+
+        # --- Pop-up Window ---
+        # popup = Toplevel(self.root)
+        # popup.title("Chakra Activation Review")
+        # popup.geometry("650x1000")
+        #
+        # Label(popup, text="🧘 Chakra & Frequency Activation Summary", font=("Helvetica", 14, "bold")).pack(pady=10)
+        #
+        # frame = Frame(popup)
+        # frame.pack(fill=BOTH, expand=True, padx=10, pady=5)
+        #
+        # scrollbar = Scrollbar(frame)
+        # scrollbar.pack(side=RIGHT, fill=Y)
+        #
+        # textbox = Text(frame, wrap="word", yscrollcommand=scrollbar.set, font=("Helvetica", 10))
+        # textbox.pack(side="left", fill=BOTH, expand=True)
+        # scrollbar.config(command=textbox.yview)
+        #
+        # paragraph = "\n\n".join(balance_lines)
+        # textbox.insert("1.0", paragraph)
+        # textbox.config(state="disabled")
+
+        # Button(popup, text="Close", command=popup.destroy).pack(pady=15)
+
     def alert_chakra_flags(self, flags):
         if flags:
-            self.log_message("⚠️ Chakra Imbalance Alerts:")
+            # self.log_message("⚠️ Chakra Imbalance Alerts:")
             for flag in flags:
                 self.log_message(flag)
 
@@ -721,19 +767,22 @@ class AudioVisualizerApp:
         freqs, mag = compute_fft(self.data_buffer, self.sample_rate)
         adjusted_mag = mag if self.baseline_fft is None else np.clip(mag - self.baseline_fft, 0, None)
 
-        # ✅ Store latest snapshot for chakra energy balance analysis
-        self.latest_fft_freqs = freqs
-        self.latest_fft_mags = adjusted_mag  # use adjusted to match what's being visualized
-
         self.ax_spectrum.clear()
-        self.ax_spectrum.plot(freqs, adjusted_mag, color='cyan')
+        self.ax_spectrum.plot(freqs, adjusted_mag, color="cyan")
         self.ax_spectrum.set_xlim(0, 1000)
         self.ax_spectrum.set_ylim(0, np.max(adjusted_mag) + 100)
 
-        # Adjust threshold value here
         threshold = 25000 * self.filter_strength_multiplier
 
-        for freq, mag, label, color in detect_peaks(freqs, adjusted_mag, threshold=threshold):
+        # ✅ Store latest FFT arrays (always!)
+        self.latest_fft_freqs = freqs
+        self.latest_fft_mags = adjusted_mag
+
+        # ✅ Detect peaks & store them
+        peaks = detect_peaks(freqs, adjusted_mag, threshold=threshold)
+        self.latest_peaks = peaks  # <--- this was missing
+
+        for freq, mag, label, color in peaks:
             log_alert_to_file(freq, mag, label)
             log_alert_to_gui(self.alert_text, f"{label}: {freq:.1f} Hz (Mag: {mag:.0f})", color or "white")
             self.ax_spectrum.axvline(freq, color=color or "white", linestyle="--", alpha=0.8)
@@ -742,18 +791,13 @@ class AudioVisualizerApp:
                 self.frequency_counts[label] += 1
                 self.counter_vars[label].set(f"{label}: {self.frequency_counts[label]}")
 
-            # ✅ Real-time chakra energy balance check
-            if self.calibrated:
-                self.latest_fft_freqs = freqs
-                self.latest_fft_mags = adjusted_mag
-
-                # Only analyze if the total energy exceeds a noise threshold
-                energy = np.sum(adjusted_mag)
-                noise_floor = 3000  # You can tune this based on real-world quiet room FFT
-
-                if energy > noise_floor:
-                    balance = self.analyze_chakra_energy_balance(freqs, adjusted_mag)
-                    self.alert_chakra_flags(balance["flags"])
+        # ✅ Real-time chakra balance analysis (optional, live alerts)
+        if self.calibrated:
+            energy = np.sum(adjusted_mag)
+            noise_floor = 3000
+            if energy > noise_floor:
+                balance = self.analyze_chakra_energy_balance(peaks)
+                self.alert_chakra_flags(balance["flags"])
 
         self.canvas.draw()
         self.root.after(50, self.animate)
