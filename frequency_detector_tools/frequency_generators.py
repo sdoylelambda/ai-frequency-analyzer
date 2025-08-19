@@ -13,10 +13,10 @@ def play_tone(freq=528.0, duration=2.0, volume=0.5, sample_rate=44100):
 # play_tone(freq=528.0, duration=2.0, volume=0.5)
 
 
-# test_freqs = [396, 417]
-test_freqs = [2, 19, 80, 666, 6, 10, 136.1, 172, 215, 285, 396, 417, 432, 528, 741, 777, 888, 963, 999, 1111]
-# test_freqs = [285, 396, 417, 432, 528, 741]
+# test_freqs = [741]
+# test_freqs = [2, 19, 80, 666, 6, 10, 136.1, 172, 215, 285, 396, 417, 432, 528, 741, 777, 888, 963, 999, 1111]
+test_freqs = [172, 215, 285, 396, 417, 432, 528, 741]
 
 for freq in test_freqs:
     print(f"Playing {freq} Hz")
-    play_tone(freq=freq, duration=2.0)
+    play_tone(freq=freq, duration=5.0)

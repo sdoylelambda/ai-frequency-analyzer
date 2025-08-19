@@ -94,7 +94,18 @@ base_bands = [
 # 888
 # 777
 
-
+    # ("Theta", 'lightgreen'),
+    # ("Alpha", 'lightpink'),
+    #
+    # ("Sub-Delta (disorienting)", 'red'),
+    # ("Fear/Infrasound", 'darkred'),
+    # ("Agitation Band", 'tomato'),
+    # ("666Hz (symbolic)", 'red'),
+    #
+    # ("1111 - Spiritual Awakening", 'gold'),
+    # ("999 - Manifestation and Transformation", 'gold'),
+    # ("888 - Abundance and Prosperity", 'gold'),
+    # ("777 - Positive Energy Flow", 'violet'),
 
 
 

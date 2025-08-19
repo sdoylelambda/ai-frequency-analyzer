@@ -106,6 +106,8 @@ def detect_peaks(freqs, magnitude, threshold=200000, match_rate_threshold=0.125,
             print(f"[INFO] Match rate below threshold ({match_rate:.1%} < {match_rate_threshold:.1%}), suppressing detection.")
         return []
 
+    print('peaks:::::::::::::::::', peaks)
+
     return peaks
 
 # import numpy as np
