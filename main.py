@@ -413,9 +413,11 @@ class AudioVisualizerApp:
         # ✅ Always show balance score
         balance_lines.append(f"\n🧭 Overall Energy Balance Score: {balance.get('balance_score', 0.0) * 10:.1f}/10")
 
+
+        # THIS MAKE DUPLICATE ENTRY
         # ✅ Also show tuning message inline (if present)
-        if "tuning_message" in balance:
-            balance_lines.append(f"\n🎵 Tuning Analysis: {balance['tuning_message']}")
+        # if "tuning_message" in balance:
+        #     balance_lines.append(f"\n🎵 Tuning Analysis: {balance['tuning_message']}")
 
         # ✅ Observations / flags
         if balance.get("flags"):
