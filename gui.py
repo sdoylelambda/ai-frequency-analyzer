@@ -26,6 +26,22 @@ def update_frequency_counter_display(self):
 def build_gui(root, fig, start_callback, stop_callback, calibrate_silence):
     """Builds the full Tkinter + Matplotlib GUI and returns widgets as a dict."""
 
+    # === Instructions Label ===
+    status_label = tk.Label(root, text="Instructions")
+    status_label.grid(row=1, column=2, columnspan=2, padx=2, pady=2)
+    status_label = tk.Label(root, text="1 - Click Start Simulation Button")
+    status_label.grid(row=1, column=3, columnspan=2, padx=2, pady=2)
+    status_label = tk.Label(root, text="2 - Click Calibrate In Silence Button")
+    status_label.grid(row=2, column=3, columnspan=2, padx=2, pady=2)
+    status_label = tk.Label(root, text="3 - Play music, talk, etc.")
+    status_label.grid(row=3, column=3, columnspan=2, padx=2, pady=2)
+    status_label = tk.Label(root, text="4 - Click Generate Review Button.")
+    status_label.grid(row=1, column=4, columnspan=2, padx=2, pady=2)
+    status_label = tk.Label(root, text="5 - Click AI Review Button.")
+    status_label.grid(row=2, column=4, columnspan=2, padx=2, pady=2)
+    status_label = tk.Label(root, text="6 - Paste in text box and press enter.")
+    status_label.grid(row=3, column=4, columnspan=2, padx=2, pady=2)
+
     # === Calibration Button ===
     calibrate_button = ttk.Button(root, text="Calibrate in Silence", command=calibrate_silence)
     calibrate_button.grid(row=0, column=3)
@@ -57,11 +73,7 @@ def build_gui(root, fig, start_callback, stop_callback, calibrate_silence):
     decrease_btn.grid(row=0, column=3)
 
     # === Frequency Counter Frame ===
-    # counter_frame = ttk.LabelFrame(root, text="Frequency Detection Count", padding=10)
-    # counter_frame.grid(row=5, column=3, sticky='we', padx=10)
-    #
-    # counter_vars = defaultdict(lambda: tk.StringVar(value=""))
-    counter_frame = ttk.LabelFrame(root, text="Frequency Detection Count", padding=10)
+    counter_frame = tk.LabelFrame(root, text="Frequency Detection Count", bg="black", fg="white", padx=10, pady=10)
     counter_frame.grid(row=5, column=3, sticky='we', padx=10)
 
     counter_labels = {}
@@ -74,21 +86,9 @@ def build_gui(root, fig, start_callback, stop_callback, calibrate_silence):
         frequency_counts[label] = 0
         var = tk.StringVar(value=f"{label}: 0")
         counter_vars[label] = var
-        lbl = ttk.Label(counter_frame, textvariable=var, foreground=color)
+        lbl = tk.Label(counter_frame, textvariable=var, foreground=color, background="black")
         lbl.grid(row=idx // 2, column=idx % 2, sticky='w', padx=5, pady=2)
         counter_labels[label] = lbl
-    #
-    # # Build unique set of chakra labels for frequency counting
-    # unique_labels = list({label: color for _, _, label, color in CHAKRA_FREQUENCY_BANDS}.items())
-    # counter_frame = ttk.LabelFrame(root, text="Frequency Detection Count", padding=10)
-    # counter_frame.grid(row=5, column=3, sticky='we', padx=10, pady=10)
-    # frequency_counts = {}
-    #
-    # for idx, (label, color) in enumerate(unique_labels):
-    #     frequency_counts[label] = 0
-    #     counter_vars[label] = tk.StringVar(value=f"{label}: 0")
-    #     lbl = ttk.Label(counter_frame, textvariable=counter_vars[label], foreground=color)
-    #     lbl.grid(row=idx // 2, column=idx % 2, sticky='w', padx=5, pady=2)
 
     # === Checkbox: Alert Mode ===
     alert_var = tk.BooleanVar()

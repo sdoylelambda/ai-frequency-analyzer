@@ -1,15 +1,22 @@
 import tkinter as tk
 import numpy as np
 import matplotlib.pyplot as plt
-import re
+import tkinter as tk
+from tkinter import Button
+import webbrowser
+import pyperclip  # pip install pyperclip
 
 from audio_stream import AudioStream
 from fft_processor import compute_fft, detect_peaks
 from alert_system import log_alert_to_file, log_alert_to_gui
 from logger import log_to_gui
 from gui import build_gui
+from disclaimer import show_disclaimer
+from setup import show_setup
 from config import SAMPLE_RATE, FRAME_SIZE
 from tkinter import Button, Toplevel, Label, END, Text, RIGHT, Frame, Scrollbar, Y, BOTH
+
+# Removed import here for latest fine-tuning
 
 
 CHAKRA_EFFECTS = {
@@ -373,6 +380,26 @@ class AudioVisualizerApp:
         paragraph_summary = self.build_paragraph_summary(balance.get("chakra_energies", {}))
         balance_lines.insert(0, "📝 Narrative Summary:\n" + paragraph_summary + "\n")
 
+        # Turn full review into one string
+        review_text = "\n".join(balance_lines)
+
+        # CHATGPT_URL = "https://chat.openai.com/"
+        #
+        # def add_ai_review_button(popup, review_text):
+        #     def open_chatgpt():
+        #         pyperclip.copy(review_text)  # Copy review to clipboard
+        #         webbrowser.open(CHATGPT_URL)  # Open ChatGPT in browser
+        #
+        #     Button(
+        #         popup,
+        #         text="🤖 AI Review (via ChatGPT)",
+        #         command=open_chatgpt,
+        #         bg="purple",
+        #         fg="white"
+        #     ).pack(pady=10)
+        #
+        # add_ai_review_button(popup, review_text)
+
         # Helper: extract the first frequency from a label to sort by Hz
         def _extract_freq_from_label(text):
             import re
@@ -454,6 +481,23 @@ class AudioVisualizerApp:
             pass  # optional: you can keep your previous “detailed list” block here if you like.
 
         Button(popup, text="Close", command=popup.destroy).pack(pady=15)
+
+        CHATGPT_URL = "https://chat.openai.com/"
+
+        def add_ai_review_button(popup, review_text):
+            def open_chatgpt():
+                pyperclip.copy(review_text)  # Copy review to clipboard
+                webbrowser.open(CHATGPT_URL)  # Open ChatGPT in browser
+
+            Button(
+                popup,
+                text="🤖 AI Review (via ChatGPT) - paste (control + v) into text box",
+                command=open_chatgpt,
+                bg="purple",
+                fg="white"
+            ).pack(pady=10)
+
+        add_ai_review_button(popup, review_text)
 
         # --- Chakra + Extra Frequency Hit Counts ---
         # --- This is now redundant ---
@@ -807,6 +851,8 @@ class AudioVisualizerApp:
 
 if __name__ == "__main__":
     root = tk.Tk()
+    show_disclaimer(root)  # Show disclaimer before continuing
+    show_setup(root)
     app = AudioVisualizerApp(root)
     root.mainloop()
 
