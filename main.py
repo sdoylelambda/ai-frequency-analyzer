@@ -8,8 +8,12 @@ from fft_processor import compute_fft, detect_peaks
 from alert_system import log_alert_to_file, log_alert_to_gui
 from logger import log_to_gui
 from gui import build_gui
+from disclaimer import show_disclaimer
+from setup import show_setup
 from config import SAMPLE_RATE, FRAME_SIZE
 from tkinter import Button, Toplevel, Label, END, Text, RIGHT, Frame, Scrollbar, Y, BOTH
+
+# Removed import here for latest fine-tuning
 
 
 CHAKRA_EFFECTS = {
@@ -807,6 +811,8 @@ class AudioVisualizerApp:
 
 if __name__ == "__main__":
     root = tk.Tk()
+    show_disclaimer(root)  # Show disclaimer before continuing
+    show_setup(root)
     app = AudioVisualizerApp(root)
     root.mainloop()
 

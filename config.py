@@ -57,35 +57,31 @@ CHAKRA_FREQUENCY_BANDS = []
 # CURRENT TESTING
 #
 base_bands = [
-    (134.1, 138.1, "136.1 - OM (C#3) 3rd Eye (6th)", 'blue'),  # TWEAK
-
-    (171, 173, "172Hz – Inner Balance / Spleen Meridian", 'blue'),
-    (210, 220, "215Hz – Emotional Clearing / Regeneration", 'skyblue'),
-    (284, 286, "285Hz – Tissue Healing / Restoration", 'turquoise'),
-
-    (395.5, 396.5, "396Hz – Root Chakra (1st)", 'red'),  # TWEAK
-    (416.5, 417.5, "417Hz – Sacral Chakra (2nd)", 'orange'),
-    (431.5, 432.5, "432Hz – Heart Chakra (4th)", 'green'),
-
-    (517, 529, "528Hz – Solar Plexus Chakra (3rd)", 'yellow'),
-    (721, 761, "741Hz – Throat Chakra (5th)", 'cyan'),
-    (943, 983, "963Hz – Crown Chakra (7th)", 'violet'),
-
-
     (4, 8, "Theta", 'lightgreen'),
     (8, 12, "Alpha", 'lightpink'),
 
+    (134.1, 138.1, "136.1 Hz - OM (C#3) 3rd Eye (6th)", 'violet'),  # TWEAK
 
+    (171, 173, "172 Hz – Inner Balance / Spleen Meridian", 'yellow'),
+    (210, 220, "215 Hz – Emotional Clearing / Regeneration", 'skyblue'),
+    (284, 286, "285 Hz – Tissue Healing / Restoration", 'turquoise'),
+
+    (395.5, 396.5, "396 Hz – Root Chakra (1st)", 'red'),  # TWEAK
+    (416.5, 417.5, "417 Hz – Sacral Chakra (2nd)", 'orange'),
+    (431.5, 432.5, "432 Hz – Heart Chakra (4th)", 'green'),
+
+    (517, 529, "528 Hz – Solar Plexus Chakra (3rd)", 'yellow'),
+    (721, 761, "741 Hz – Throat Chakra (5th)", 'cyan'),
+    (747, 807, "777 Hz - Positive Energy Flow", 'gold'),
+    (858, 918, "888 Hz - Abundance and Prosperity", 'purple'),
+    (943, 983, "963 Hz – Crown Chakra (7th)", 'violet'),
+    (969, 1029, "999 Hz - Manifestation and Transformation", 'white'),
+    (1081, 1141, "1111 Hz - Spiritual Awakening", 'orange'),
 
     (0.1, 3.9, "Sub-Delta (disorienting)", 'red'),
     (18, 20, "Fear/Infrasound", 'darkred'),
     (70, 90, "Agitation Band", 'tomato'),
-    (666, 666, "666Hz (symbolic)", 'red'),
-
-    (1081, 1141, "1111 - Spiritual Awakening", 'gold'),
-    (969, 1029, "999 - Manifestation and Transformation", 'gold'),
-    (858, 918, "888 - Abundance and Prosperity", 'gold'),
-    (747, 807, "777 - Positive Energy Flow", 'violet'),
+    (666, 666, "666 Hz (symbolic)", 'red'),
 ]
 
 # ADD THESE NEXT
