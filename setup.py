@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import Toplevel, Label, Text, Scrollbar, Frame, Button, BOTH, RIGHT, Y
 import webbrowser
 
-DONATION_URL = "https://cymatics-frequncy-analyzer.netlify.app/"  # <-- replace with your real link
+DONATION_URL = "https://cymatics-frequncy-analyzer.netlify.app/"
 
 
 def show_setup(root):
