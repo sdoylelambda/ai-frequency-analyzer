@@ -43,7 +43,7 @@ def build_gui(root, fig, start_callback, stop_callback, calibrate_silence):
     status_label.grid(row=3, column=4, columnspan=2, padx=2, pady=2)
 
     # === Calibration Button ===
-    calibrate_button = ttk.Button(root, text="Calibrate in Silence", command=calibrate_silence)
+    calibrate_button = tk.Button(root, text="Calibrate in Silence", command=calibrate_silence)
     calibrate_button.grid(row=0, column=3)
     calibrate_button.config(state='normal')  # ✅ Make sure it's clickable
 
