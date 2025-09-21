@@ -2,9 +2,13 @@ import tkinter as tk
 import numpy as np
 import matplotlib.pyplot as plt
 import tkinter as tk
+import customtkinter as ctk
 from tkinter import Button
 import webbrowser
 import pyperclip  # pip install pyperclip
+import threading
+import sounddevice as sd
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from audio_stream import AudioStream
 from fft_processor import compute_fft, detect_peaks
@@ -12,6 +16,7 @@ from alert_system import log_alert_to_file, log_alert_to_gui
 from logger import log_to_gui
 from gui import build_gui
 from disclaimer import show_disclaimer
+from frequency_detector_tools import frequency_generators
 from setup import show_setup
 from config import SAMPLE_RATE, FRAME_SIZE
 from tkinter import Button, Toplevel, Label, END, Text, RIGHT, Frame, Scrollbar, Y, BOTH
@@ -32,8 +37,23 @@ CHAKRA_EFFECTS = {
 
 class AudioVisualizerApp:
     def __init__(self, root):
+        # ----------------------------
+        # Global style settings
+        # ----------------------------
+        self.DEFAULT_FONT = ("Helvetica", 12)
+        self.DEFAULT_BUTTON_FONT = ("Helvetica", 14, "bold")
+        self.DEFAULT_BUTTON_CORNER_RADIUS = 12
+        self.DEFAULT_BUTTON_WIDTH = 140
+        self.DEFAULT_BUTTON_HEIGHT = 40
+
+        self.DEFAULT_LABEL_FONT = ("Helvetica", 13)
+        self.DEFAULT_ENTRY_FONT = ("Helvetica", 13)
+        self.DEFAULT_ENTRY_WIDTH = 200
+        self.DEFAULT_BUTTON_COLOR = 'teal'
+        self.DEFAULT_BUTTON_HOVER_COLOR = 'blue'
+
         self.latest_peaks = None
-        self.min_energy_for_flags = 10000  # or another reasonable threshold value
+        self.min_energy_for_flags = 10000
         self.root = root
         self.root.title("Cymatics Frequency Analyzer")
 
@@ -48,21 +68,32 @@ class AudioVisualizerApp:
         self.latest_fft_mags = None
         self.latest_fft_freqs = None
 
-        # Setup matplotlib figure and axes
+        # ----------------------------
+        # Main frame
+        # ----------------------------
+        self.frame = ctk.CTkFrame(root)
+        self.frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+        # ----------------------------
+        # Matplotlib figure
+        # ----------------------------
         self.fig, (self.ax_waveform, self.ax_spectrum) = plt.subplots(1, 2, figsize=(12, 5))
         self.fig.tight_layout(pad=3.0)
         self.line_waveform, = self.ax_waveform.plot([], [], lw=2)
         self.line_spectrum, = self.ax_spectrum.plot([], [], lw=2)
 
-        # Build GUI and extract widgets
+        # ----------------------------
+        # Build GUI widgets inside self.frame
+        # ----------------------------
         self.widgets = build_gui(
-            self.root,
+            self.frame,  # Pass frame as parent!
             self.fig,
             self.start_visualization,
             self.stop_visualization,
             self.calibrate_silence
         )
 
+        # Extract main widgets
         self.canvas = self.widgets["canvas"]
         self.alert_var = self.widgets["alert_var"]
         self.alert_text = self.widgets["alert_text"]
@@ -73,13 +104,105 @@ class AudioVisualizerApp:
         self.frequency_counts = self.widgets["frequency_counts"]
         self.counter_vars = self.widgets["counter_vars"]
 
-        self.widgets["increase_btn"].config(command=self.increase_filter_strength)
-        self.widgets["decrease_btn"].config(command=self.decrease_filter_strength)
+        # ----------------------------
+        # Start / Stop Visualization Buttons
+        # ----------------------------
+        self.widgets["start_btn"] = ctk.CTkButton(
+            self.frame, text="Start Visualization", command=self.start_visualization,
+            font=self.DEFAULT_BUTTON_FONT, corner_radius=self.DEFAULT_BUTTON_CORNER_RADIUS
+        )
+        self.widgets["start_btn"].grid(row=0, column=0, padx=5, pady=5)
 
-        # Review button
-        self.widgets["review_btn"] = Button(self.root, text="Generate Review")
-        self.widgets["review_btn"].grid(row=1, column=0, columnspan=2, pady=5)
-        self.widgets["review_btn"].config(command=self.show_review)
+        self.widgets["stop_btn"] = ctk.CTkButton(
+            self.frame, text="Stop Visualization", command=self.stop_visualization,
+            font=self.DEFAULT_BUTTON_FONT, corner_radius=self.DEFAULT_BUTTON_CORNER_RADIUS
+        )
+        self.widgets["stop_btn"].grid(row=1, column=1, padx=5, pady=5)
+
+        # === Calibration Button ===
+        self.widgets["calibrate_button"] = ctk.CTkButton(
+            self.frame,  # Use your main frame so it aligns with other buttons
+            text="Calibrate in Silence",
+            command=self.calibrate_silence,
+            font=self.DEFAULT_BUTTON_FONT,
+            corner_radius=self.DEFAULT_BUTTON_CORNER_RADIUS,
+            fg_color=self.DEFAULT_BUTTON_COLOR,
+            hover_color=self.DEFAULT_BUTTON_HOVER_COLOR,
+            width=self.DEFAULT_BUTTON_WIDTH,
+            height=self.DEFAULT_BUTTON_HEIGHT
+        )
+        self.widgets["calibrate_button"].grid(row=0, column=1, padx=5, pady=5)
+
+        # ----------------------------
+        # Control Buttons
+        # ----------------------------
+        self.widgets["clear_btn"] = ctk.CTkButton(
+            self.frame, text="Clear All", command=self.clear_all,
+            font=self.DEFAULT_BUTTON_FONT, corner_radius=self.DEFAULT_BUTTON_CORNER_RADIUS
+        )
+        self.widgets["clear_btn"].grid(row=1, column=0, padx=5, pady=5)
+
+        self.widgets["increase_btn"] = ctk.CTkButton(
+            self.frame, text="Increase Filter", command=self.increase_filter_strength,
+            font=self.DEFAULT_BUTTON_FONT, corner_radius=self.DEFAULT_BUTTON_CORNER_RADIUS
+        )
+        self.widgets["increase_btn"].grid(row=0, column=2, padx=5, pady=5)
+
+        self.widgets["decrease_btn"] = ctk.CTkButton(
+            self.frame, text="Decrease Filter", command=self.decrease_filter_strength,
+            font=self.DEFAULT_BUTTON_FONT, corner_radius=self.DEFAULT_BUTTON_CORNER_RADIUS
+        )
+        self.widgets["decrease_btn"].grid(row=0, column=3, padx=5, pady=5)
+
+        self.widgets["frequency_generators"] = ctk.CTkButton(
+            self.frame, text="Test Frequencies", command=self.start_frequency_generators_thread,
+            font=self.DEFAULT_BUTTON_FONT, corner_radius=self.DEFAULT_BUTTON_CORNER_RADIUS
+        )
+        self.widgets["frequency_generators"].grid(row=1, column=2, padx=5, pady=5)
+
+        self.widgets["review_btn"] = ctk.CTkButton(
+            self.frame, text="Generate Review", command=self.show_review,
+            font=self.DEFAULT_BUTTON_FONT, corner_radius=self.DEFAULT_BUTTON_CORNER_RADIUS
+        )
+        self.widgets["review_btn"].grid(row=2, column=1, columnspan=3, pady=5)
+
+        # Status label
+        self.widgets["status_label"] = ctk.CTkLabel(
+            self.frame, text="Status: Ready", font=self.DEFAULT_LABEL_FONT
+        )
+        self.widgets["status_label"].grid(row=3, column=0, columnspan=3, pady=5)
+
+        # ----------------------------
+        # Matplotlib canvas
+        # ----------------------------
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.frame)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().grid(row=4, column=0, columnspan=3, padx=10, pady=10, sticky="nsew")
+
+        # Make row 4 expandable
+        self.frame.grid_rowconfigure(4, weight=1)
+        self.frame.grid_columnconfigure((0, 1, 2), weight=1)
+
+        # Test frequencies for generator
+        self.test_freqs = [172, 215, 285, 396, 417, 432, 528, 741, 963]
+
+    def play_tone(self, freq=528.0, duration=2.0, volume=0.5, sample_rate=44100):
+        t = np.linspace(0, duration, int(sample_rate * duration), False)
+        tone = np.sin(freq * 2 * np.pi * t)
+        audio = tone * volume
+        sd.play(audio, samplerate=sample_rate)
+        sd.wait()  # Wait for this tone to finish
+
+    def frequency_generators(self):
+        for freq in self.test_freqs:
+            print(f"Playing {freq} Hz")
+            self.play_tone(freq=freq, duration=5.0)
+
+    def start_frequency_generators_thread(self):
+        # Run frequency_generators in a separate thread to keep GUI responsive
+        thread = threading.Thread(target=self.frequency_generators)
+        thread.daemon = True  # thread closes when GUI closes
+        thread.start()
 
     def log_message(self, message):
         # self.widgets["log_text"].insert(END, message + "\n")
@@ -795,6 +918,55 @@ class AudioVisualizerApp:
 
         self.root.after(100, collect_frame)
 
+    def clear_all(self):
+        # Reset frequency counts but keep names
+        for label, var in self.counter_vars.items():
+            self.frequency_counts[label] = 0
+            current_text = var.get()
+            # Split at the last colon (so labels with ":" still work)
+            if ":" in current_text:
+                name, _ = current_text.rsplit(":", 1)
+                var.set(f"{name}: 0")
+            else:
+                var.set(f"{label}: 0")
+
+        # Clear logs
+        if hasattr(self.log_text, "delete"):
+            self.log_text.delete(1.0, tk.END)
+        else:
+            self.log_text.config(text="")
+
+        # Clear alerts
+        if hasattr(self.alert_text, "delete"):
+            self.alert_text.delete(1.0, tk.END)
+        else:
+            self.alert_text.config(text="")
+
+    def update_all_widgets(self, parent=None):
+        """Recursively updates all widgets to modern style."""
+        if parent is None:
+            parent = self.root
+
+        for widget in parent.winfo_children():
+            if isinstance(widget, ctk.CTkButton):
+                widget.configure(
+                    font=self.DEFAULT_BUTTON_FONT,
+                    corner_radius=self.DEFAULT_BUTTON_CORNER_RADIUS,
+                    width=self.DEFAULT_BUTTON_WIDTH,
+                    height=self.DEFAULT_BUTTON_HEIGHT,
+                    fg_color=self.DEFAULT_BUTTON_COLOR,
+                    hover_color=self.DEFAULT_BUTTON_HOVER_COLOR,
+                )
+            elif isinstance(widget, ctk.CTkLabel):
+                widget.configure(font=self.DEFAULT_FONT)
+            elif isinstance(widget, ctk.CTkEntry):
+                widget.configure(font=self.DEFAULT_FONT, width=220)
+            elif isinstance(widget, ctk.CTkTextbox):
+                widget.configure(font=self.DEFAULT_FONT)
+
+            if widget.winfo_children():
+                self.update_all_widgets(widget)
+
     def animate(self):
         if not self.is_running:
             return
@@ -850,10 +1022,36 @@ class AudioVisualizerApp:
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    show_disclaimer(root)  # Show disclaimer before continuing
-    show_setup(root)
+    # --- CustomTkinter appearance ---
+    ctk.set_appearance_mode("dark")
+    ctk.set_default_color_theme("green")
+
+    # --- Initialize main window ---
+    root = ctk.CTk()
+    root.title("Audio Visualizer App")
+
+    # --- Dynamically size main app to 90% of screen and center ---
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    w = int(screen_width * 0.7)
+    h = int(screen_height * 0.8)
+    x = (screen_width - w) // 2
+    y = (screen_height - h) // 2
+    root.geometry(f"{w}x{h}+{x}+{y}")
+
+    # --- Step 1: Show Disclaimer (modal) ---
+    disclaimer_popup = show_disclaimer(root)
+    # Modal handled by grab_set inside show_disclaimer
+
+    # --- Step 2: Initialize main app ---
     app = AudioVisualizerApp(root)
+    app.update_all_widgets()  # apply modern fonts and button styling
+
+    # --- Step 3: Show Setup (non-modal) ---
+    setup_popup = show_setup(root)
+    # Make sure grab_set is removed in show_setup so main app remains usable
+
+    # --- Run main loop ---
     root.mainloop()
 
 

@@ -1,5 +1,4 @@
-import tkinter as tk
-from tkinter import messagebox
+import customtkinter as ctk
 
 DISCLAIMER_TEXT = """ 
 DISCLAIMER & TERMS OF USE
@@ -34,13 +33,30 @@ Developer Contact: Sean Doyle / sdoyledev@gmail.com / https://cymatics-frequncy-
 
 def show_disclaimer(root):
     """
-    Displays the disclaimer popup.
-    If user accepts, program continues.
-    If user cancels, program exits.
+    Displays the disclaimer as a CustomTkinter modal popup.
+    Blocks the main window until user clicks 'Accept'.
+    Returns the Toplevel window for wait_window usage.
     """
-    root.withdraw()  # Hide main window until user accepts
-    response = messagebox.askokcancel("Disclaimer & Terms of Use", DISCLAIMER_TEXT)
-    if not response:
-        root.destroy()
-        exit(0)
-    root.deiconify()  # Show main window once disclaimer accepted
+    root.withdraw()  # Hide main window until accepted
+
+    popup = ctk.CTkToplevel(root)
+    popup.title("Disclaimer & Terms of Use")
+    popup.geometry("600x500")
+    popup.grab_set()  # Make modal
+    popup.focus_set()
+
+    # Scrollable text area
+    text_box = ctk.CTkTextbox(popup, width=560, height=400, font=("Helvetica", 18))
+    text_box.pack(padx=20, pady=20)
+    text_box.insert("0.0", DISCLAIMER_TEXT)
+    text_box.configure(state="disabled")  # Make read-only
+
+    # Accept button
+    def accept():
+        popup.destroy()
+        root.deiconify()  # Show main window
+
+    accept_btn = ctk.CTkButton(popup, text="Accept", corner_radius=12, font=("Helvetica", 18, "bold"), command=accept)
+    accept_btn.pack(pady=10)
+
+    return popup

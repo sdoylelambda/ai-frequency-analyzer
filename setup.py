@@ -1,29 +1,9 @@
-import tkinter as tk
-from tkinter import Toplevel, Label, Text, Scrollbar, Frame, Button, BOTH, RIGHT, Y
+import customtkinter as ctk
 import webbrowser
 
 DONATION_URL = "https://cymatics-frequncy-analyzer.netlify.app/"
 
-
-def show_setup(root):
-    """Display setup & instructions popup at program start."""
-    popup = Toplevel(root)
-    popup.title("App Setup & Instructions")
-    popup.geometry("700x800")
-
-    # --- SCROLLABLE FRAME ---
-    frame = Frame(popup)
-    frame.pack(fill=BOTH, expand=True, padx=10, pady=10)
-
-    scrollbar = Scrollbar(frame)
-    scrollbar.pack(side=RIGHT, fill=Y)
-
-    textbox = Text(frame, wrap="word", yscrollcommand=scrollbar.set, font=("Helvetica", 11))
-    textbox.pack(side="left", fill=BOTH, expand=True)
-    scrollbar.config(command=textbox.yview)
-
-    # --- Content ---
-    content = """
+SETUP_TEXT = """
 🛠️ Setup Instructions
 ---------------------------------
 1. Connect a working microphone (USB or built-in).
@@ -66,14 +46,48 @@ A: No. This app is experimental, spiritual, and educational only. It is not a su
 ---------------------------------
 This app is free to use, but if you’d like to support development, get more info, or make a suggestion click the link below:
 """
-    textbox.insert("1.0", content)
-    textbox.config(state="disabled")
 
-    # --- Clickable donation link ---
-    link_label = Label(popup, text="👉 Donate here", font=("Helvetica", 11, "underline"),
-                       fg="blue", cursor="hand2")
-    link_label.pack(pady=5)
-    link_label.bind("<Button-1>", lambda e: webbrowser.open_new(DONATION_URL))
 
-    # --- Close button ---
-    Button(popup, text="Close", command=popup.destroy).pack(pady=10)
+def show_setup(root):
+    popup = ctk.CTkToplevel(root)
+    popup.title("App Setup & Instructions")
+    popup.geometry("700x800")
+    popup.transient(root)
+    popup.lift()
+    popup.focus_force()
+
+    # --- Content Frame ---
+    frame = ctk.CTkFrame(popup)
+    frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+    # Scrollable Textbox
+    textbox = ctk.CTkTextbox(frame, width=660, height=600, font=("Helvetica", 18))
+    textbox.pack(side="top", fill="both", expand=True)
+    textbox.insert("0.0", SETUP_TEXT)
+    textbox.configure(state="disabled")
+
+    # --- Close Button ---
+    def close_popup():
+        if popup.winfo_exists():
+            popup.grab_release()
+            popup.destroy()
+
+    close_btn = ctk.CTkButton(frame, text="Close", corner_radius=12,
+                              font=("Helvetica", 18, "bold"), command=close_popup)
+    close_btn.pack(pady=10)
+
+    # --- Donate Button ---
+    def open_donation():
+        webbrowser.open_new(DONATION_URL)
+
+    donate_btn = ctk.CTkButton(frame, text="Donate / Support", corner_radius=12,
+                               font=("Helvetica", 18), command=open_donation)
+    donate_btn.pack(pady=5)
+
+    # Handle window X safely
+    popup.protocol("WM_DELETE_WINDOW", close_popup)
+
+    # Do NOT use wait_window — modal behavior is handled by grab_set
+    # root.wait_window(popup)  # remove this line
+
+    return popup
