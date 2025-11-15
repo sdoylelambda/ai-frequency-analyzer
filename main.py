@@ -622,6 +622,7 @@ class AudioVisualizerApp:
 
         add_ai_review_button(popup, review_text)
 
+
         # --- Chakra + Extra Frequency Hit Counts ---
         # --- This is now redundant ---
         # if hasattr(self, "frequency_counts") and self.frequency_counts:
