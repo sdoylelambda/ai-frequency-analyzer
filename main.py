@@ -9,12 +9,12 @@ import pyperclip  # pip install pyperclip
 import threading
 import sounddevice as sd
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
 from audio_stream import AudioStream
 from fft_processor import compute_fft, detect_peaks
 from alert_system import log_alert_to_file, log_alert_to_gui
 from logger import log_to_gui
 from gui import build_gui
+from TonePlayer import TonePlayer
 from disclaimer import show_disclaimer
 from frequency_detector_tools import frequency_generators
 from setup import show_setup
@@ -185,6 +185,11 @@ class AudioVisualizerApp:
 
         # Test frequencies for generator
         self.test_freqs = [172, 215, 285, 396, 417, 432, 528, 741, 963]
+
+        # ----------------------------
+        # Test Freq
+        # ----------------------------
+        self.tone_player = TonePlayer()
 
     def play_tone(self, freq=528.0, duration=2.0, volume=0.5, sample_rate=44100):
         t = np.linspace(0, duration, int(sample_rate * duration), False)
@@ -999,7 +1004,7 @@ class AudioVisualizerApp:
 
         # ✅ Detect peaks & store them
         peaks = detect_peaks(freqs, adjusted_mag, threshold=threshold)
-        self.latest_peaks = peaks  # <--- this was missing
+        self.latest_peaks = peaks
 
         for freq, mag, label, color in peaks:
             log_alert_to_file(freq, mag, label)
