@@ -1,10 +1,12 @@
 import tkinter as tk
+import threading
 from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 from config import CHAKRA_FREQUENCY_BANDS
 from collections import defaultdict
 from alert_system import match_frequency_to_band
+from TonePlayer import TonePlayer
 
 
 def update_frequency_count(self, freq):
@@ -73,22 +75,75 @@ def build_gui(root, fig, start_callback, stop_callback, calibrate_silence):
     decrease_btn.grid(row=0, column=3)
 
     # === Frequency Counter Frame ===
-    counter_frame = tk.LabelFrame(root, text="Frequency Detection Count", bg="black", fg="white", padx=10, pady=10)
+    counter_frame = tk.LabelFrame(
+        root,
+        text="Frequency Detection Count",
+        bg="black",
+        fg="white",
+        padx=10, pady=10
+    )
     counter_frame.grid(row=5, column=3, sticky='we', padx=10)
 
     counter_labels = {}
     frequency_counts = {}
     counter_vars = {}
 
-    # Only one counter per unique frequency label
+    # Tone Player Instance
+    tone_player = TonePlayer()
+
+    # Unique labels (preserves your existing structure)
     unique_labels = list({label: color for _, _, label, color in CHAKRA_FREQUENCY_BANDS}.items())
+
     for idx, (label, color) in enumerate(unique_labels):
+
+        # Extract frequency from label (handles numbers like 963, 1111)
+        freq_str = "".join([c for c in label if c.isdigit() or c == '.'])
+        if not freq_str:
+            continue
+        freq = float(freq_str)
+
+        # Row/column placement (2 columns layout preserved)
+        row = idx // 2
+        col = (idx % 2) * 3  # reserve 3 columns per freq block
+
+        # Counter variable
         frequency_counts[label] = 0
         var = tk.StringVar(value=f"{label}: 0")
         counter_vars[label] = var
-        lbl = tk.Label(counter_frame, textvariable=var, foreground=color, background="black")
-        lbl.grid(row=idx // 2, column=idx % 2, sticky='w', padx=5, pady=2)
+
+        # Counter label
+        lbl = tk.Label(
+            counter_frame,
+            textvariable=var,
+            fg=color,
+            bg="black"
+        )
+        lbl.grid(row=row, column=col, sticky='w', padx=5, pady=2)
         counter_labels[label] = lbl
+
+        # ▶️ 5-second test button
+        btn_test_5s = tk.Button(
+            counter_frame,
+            text="▶️ 5s",
+            bg="gray20",
+            fg="white",
+            width=4,
+            command=lambda f=freq: threading.Thread(
+                target=tone_player.play_tone_once, args=(f, 5), daemon=True
+            ).start()
+        )
+        btn_test_5s.grid(row=row, column=col + 1, padx=5)
+
+        # 🔁 continuous toggle button
+        btn_toggle = tk.Button(
+            counter_frame,
+            text="🔁",
+            bg="gray30",
+            fg="white",
+            width=3,
+            command=lambda f=freq: tone_player.toggle_tone(f)
+        )
+        btn_toggle.grid(row=row, column=col + 2, padx=5)
 
     # === Checkbox: Alert Mode ===
     alert_var = tk.BooleanVar()
