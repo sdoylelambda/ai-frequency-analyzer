@@ -9,17 +9,27 @@ class TonePlayer:
         self.active_streams = {}   # freq → stream
         self.stop_flags = {}       # freq → threading.Event()
 
+    # --- Normalize frequency into a consistent base octave ---
+    def normalize_octave(self, freq):
+        f = float(freq)
+        while f > 450:        # shift down 1 octave while too bright
+            f /= 2
+        return f
+
     # --- Play a tone once for N seconds ---
     def play_tone_once(self, freq, duration):
+        freq = self.normalize_octave(freq)
         sample_rate = 44100
+
         t = np.linspace(0, duration, int(sample_rate * duration), False)
         tone = np.sin(2 * np.pi * freq * t).astype(np.float32)
 
         sd.play(tone, sample_rate)
         sd.wait()
 
-    # --- Toggle continuous tone ---
+    # --- Toggle continuous tone (smooth, no pulsing) ---
     def toggle_tone(self, freq):
+        freq = self.normalize_octave(freq)
 
         # Stop if already playing
         if freq in self.active_streams:
@@ -32,15 +42,17 @@ class TonePlayer:
             return
 
         print(f"🎵 Starting continuous tone: {freq} Hz")
+
         stop_flag = threading.Event()
         self.stop_flags[freq] = stop_flag
 
         sample_rate = 44100
         cycle_len = int(sample_rate / freq)
+
         t = np.linspace(0, cycle_len / sample_rate, cycle_len, False)
         wave = np.sin(2 * np.pi * freq * t).astype(np.float32)
 
-        # Stream callback for smooth continuous output
+        # Seamless infinite loop without pulsing
         def callback(outdata, frames, time, status):
             if stop_flag.is_set():
                 raise sd.CallbackStop()
