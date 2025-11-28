@@ -1,0 +1,11 @@
+body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; background:#0f1720; color:#e6eef8; padding:18px; }
+#app { max-width:980px; margin:0 auto; }
+.controls { margin-bottom:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+button { background:#334155; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
+button:disabled { opacity:0.4; cursor:not-allowed; }
+#visual { background:#071018; padding:8px; border-radius:8px; }
+#status { margin-top:8px; color:#9fb3ff; }
+#log { margin-top:8px; font-size:13px; color:#cfe8ff; max-height:160px; overflow:auto; background:#021017; padding:8px; border-radius:6px; }
+canvas { width:100%; height:auto; display:block; background:#00121a; border-radius:6px; }
+label { color:#9fb3ff; }
+select, input[type="range"] { background:#07202a; color:#e6eef8; border-radius:6px; padding:4px; border:1px solid #123; }
