@@ -75,55 +75,93 @@ def build_gui(root, fig, start_callback, stop_callback, calibrate_silence):
     decrease_btn.grid(row=0, column=3)
 
     # === Frequency Counter Frame ===
-    counter_frame = tk.LabelFrame(
+    outer_frame = tk.LabelFrame(
         root,
         text="Frequency Detection Count",
         bg="black",
         fg="white",
         padx=10, pady=10
     )
-    counter_frame.grid(row=5, column=3, sticky='we', padx=10)
+    outer_frame.grid(row=5, column=3, sticky='nsew', padx=2, pady=2)
+
+    outer_frame.grid_columnconfigure(0, weight=1)
+    outer_frame.grid_rowconfigure(0, weight=1)
+
+    # ⚠ Renamed canvas → freq_canvas
+    freq_canvas = tk.Canvas(outer_frame, bg="black", highlightthickness=0)
+    freq_canvas.grid(row=0, column=0, sticky="nsew")
+
+    freq_canvas.config(width=1000)
+
+    scrollbar = tk.Scrollbar(outer_frame, orient="vertical", command=freq_canvas.yview)
+    scrollbar.grid(row=0, column=1, sticky="ns")
+
+    freq_canvas.configure(yscrollcommand=scrollbar.set)
+
+    # ⚠ Renamed scroll window
+    scrollable_frame = tk.Frame(freq_canvas, bg="black")
+    canvas_window = freq_canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+    def update_scroll_region(event=None):
+        freq_canvas.configure(scrollregion=freq_canvas.bbox("all"))
+
+    scrollable_frame.bind("<Configure>", update_scroll_region)
+
+    def resize_canvas(event):
+        freq_canvas.itemconfig(canvas_window, width=event.width)
+
+    freq_canvas.bind("<Configure>", resize_canvas)
+
+    # --- Mouse wheel support ---
+    def _on_mousewheel(event):
+        freq_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+    def _on_mousewheel_mac(event):
+        freq_canvas.yview_scroll(int(-event.delta), "units")
+
+    def _on_mousewheel_linux(event):
+        if event.num == 4:
+            freq_canvas.yview_scroll(-1, "units")
+        elif event.num == 5:
+            freq_canvas.yview_scroll(1, "units")
+
+    freq_canvas.bind_all("<MouseWheel>", _on_mousewheel)
+    freq_canvas.bind_all("<Shift-MouseWheel>", _on_mousewheel_mac)
+    freq_canvas.bind_all("<Button-4>", _on_mousewheel_linux)
+    freq_canvas.bind_all("<Button-5>", _on_mousewheel_linux)
+
+    # ---------------------------------------------------------------------
+    # Your Frequency Counter Items (UNCHANGED)
+    # ---------------------------------------------------------------------
 
     counter_labels = {}
     frequency_counts = {}
     counter_vars = {}
 
-    # Tone Player Instance
     tone_player = TonePlayer()
 
-    # Unique labels (preserves your existing structure)
     unique_labels = list({label: color for _, _, label, color in CHAKRA_FREQUENCY_BANDS}.items())
 
     for idx, (label, color) in enumerate(unique_labels):
 
-        # Extract frequency from label (handles numbers like 963, 1111)
         freq_str = "".join([c for c in label if c.isdigit() or c == '.'])
         if not freq_str:
             continue
         freq = float(freq_str)
 
-        # Row/column placement (2 columns layout preserved)
         row = idx // 2
-        col = (idx % 2) * 3  # reserve 3 columns per freq block
+        col = (idx % 2) * 3
 
-        # Counter variable
         frequency_counts[label] = 0
         var = tk.StringVar(value=f"{label}: 0")
         counter_vars[label] = var
 
-        # Counter label
-        lbl = tk.Label(
-            counter_frame,
-            textvariable=var,
-            fg=color,
-            bg="black"
-        )
+        lbl = tk.Label(scrollable_frame, textvariable=var, fg=color, bg="black")
         lbl.grid(row=row, column=col, sticky='w', padx=5, pady=2)
         counter_labels[label] = lbl
 
-        # ▶️ 5-second test button
         btn_test_5s = tk.Button(
-            counter_frame,
+            scrollable_frame,
             text="▶️ 5s",
             bg="gray20",
             fg="white",
@@ -134,9 +172,8 @@ def build_gui(root, fig, start_callback, stop_callback, calibrate_silence):
         )
         btn_test_5s.grid(row=row, column=col + 1, padx=5)
 
-        # 🔁 continuous toggle button
         btn_toggle = tk.Button(
-            counter_frame,
+            scrollable_frame,
             text="🔁",
             bg="gray30",
             fg="white",
