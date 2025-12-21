@@ -66,17 +66,17 @@ base_bands = [
     (210, 220, "215 Hz – Emotional Clearing / Regeneration", 'skyblue'),
     (284, 286, "285 Hz – Tissue Healing / Restoration", 'turquoise'),
 
-    (395.5, 396.5, "396 Hz – Root Chakra (1st)", 'red'),  # TWEAK
-    (416.5, 417.5, "417 Hz – Sacral Chakra (2nd)", 'orange'),
-    (431.5, 432.5, "432 Hz – Heart Chakra (4th)", 'green'),
+    (390.5, 401.5, "396 Hz – Root Chakra (1st)", 'red'),  # TWEAK
+    (410.5, 423.5, "417 Hz – Sacral Chakra (2nd)", 'orange'),
+    (425, 439, "432 Hz – Heart Chakra (4th)", 'green'),
 
-    (517, 529, "528 Hz – Solar Plexus Chakra (3rd)", 'yellow'),
+    (515, 531, "528 Hz – Solar Plexus Chakra (3rd)", 'yellow'),
     (721, 761, "741 Hz – Throat Chakra (5th)", 'cyan'),
-    (747, 807, "777 Hz - Positive Energy Flow", 'gold'),
-    (858, 918, "888 Hz - Abundance and Prosperity", 'purple'),
-    (943, 983, "963 Hz – Crown Chakra (7th)", 'violet'),
-    (969, 1029, "999 Hz - Manifestation and Transformation", 'white'),
-    (1081, 1141, "1111 Hz - Spiritual Awakening", 'orange'),
+    (745, 809, "777 Hz - Positive Energy Flow", 'gold'),
+    (856, 920, "888 Hz - Abundance and Prosperity", 'purple'),
+    (940, 986, "963 Hz – Crown Chakra (7th)", 'violet'),
+    (960, 1038, "999 Hz - Manifestation and Transformation", 'white'),
+    (1071, 1151, "1111 Hz - Spiritual Awakening", 'orange'),
 
     (0.1, 3.9, "Sub-Delta (disorienting)", 'red'),
     (18, 20, "Fear/Infrasound", 'darkred'),
