@@ -90,6 +90,7 @@ def detect_peaks(freqs, magnitude, threshold=200000, match_rate_threshold=0.125,
             matched_peaks += 1
             used_freqs.append(freq)
             peaks.append((freq, mag, label, color))
+            print("Added - ", freq, mag, threshold, label)
 
     # 🔒 Match rate gating
     if total_peaks == 0 or matched_peaks == 0:

@@ -234,6 +234,20 @@ class AudioVisualizerApp:
         total_energy = 0.0
 
         for freq, mag, label, color in peaks:
+            # Adjust mag for freq - (mag decreases as freq increases)
+            def frequency_weight(freq):
+                if freq < 200:
+                    return 1.0
+                elif freq < 400:
+                    return 3
+                elif freq < 800:
+                    return 5.0
+                else:
+                    return 10.0
+
+            mag = mag * frequency_weight(freq)
+            print('MAG==============================>', mag)
+
             # normalize label (strip Hz info, keep chakra if present)
             chakra = None
             if "Chakra" in label:
