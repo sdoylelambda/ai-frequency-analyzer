@@ -18,7 +18,7 @@ from TonePlayer import TonePlayer
 from disclaimer import show_disclaimer
 from frequency_detector_tools import frequency_generators
 from setup import show_setup
-from config import SAMPLE_RATE, FRAME_SIZE
+from config import SAMPLE_RATE, FRAME_SIZE, CHAKRA_FREQUENCY_BANDS, FILTER_STRENGTH_DEFAULT
 from tkinter import Button, Toplevel, Label, END, Text, RIGHT, Frame, Scrollbar, Y, BOTH
 
 # Removed import here for latest fine-tuning

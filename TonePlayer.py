@@ -18,13 +18,13 @@ class TonePlayer:
 
     # --- Play a tone once for N seconds ---
     def play_tone_once(self, freq, duration):
-        freq = self.normalize_octave(freq)
         sample_rate = 44100
 
         t = np.linspace(0, duration, int(sample_rate * duration), False)
         tone = np.sin(2 * np.pi * freq * t).astype(np.float32)
 
         sd.play(tone, sample_rate)
+        print(f"PLAYING TONE {freq} Hz")
         sd.wait()
 
     # --- Toggle continuous tone (smooth, no pulsing) ---
