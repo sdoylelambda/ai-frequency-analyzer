@@ -140,14 +140,16 @@ def build_gui(root, fig, start_callback, stop_callback, calibrate_silence):
 
     tone_player = TonePlayer()
 
-    unique_labels = list({label: color for _, _, label, color in CHAKRA_FREQUENCY_BANDS}.items())
+    for idx, (low, high, label, color) in enumerate(CHAKRA_FREQUENCY_BANDS):
 
-    for idx, (label, color) in enumerate(unique_labels):
-
-        freq_str = "".join([c for c in label if c.isdigit() or c == '.'])
-        if not freq_str:
-            continue
-        freq = float(freq_str)
+        # Choose a deterministic test frequency
+        if "Hz" in label:
+            # Try to extract explicit anchor like "432 Hz"
+            parts = label.split()
+            freq_candidates = [p.replace("Hz", "") for p in parts if p.replace('.', '').isdigit()]
+            freq = float(freq_candidates[0]) if freq_candidates else (low + high) / 2
+        else:
+            freq = (low + high) / 2  # fallback: band center
 
         row = idx // 2
         col = (idx % 2) * 3
@@ -156,7 +158,12 @@ def build_gui(root, fig, start_callback, stop_callback, calibrate_silence):
         var = tk.StringVar(value=f"{label}: 0")
         counter_vars[label] = var
 
-        lbl = tk.Label(scrollable_frame, textvariable=var, fg=color, bg="black")
+        lbl = tk.Label(
+            scrollable_frame,
+            textvariable=var,
+            fg=color,
+            bg="black"
+        )
         lbl.grid(row=row, column=col, sticky='w', padx=5, pady=2)
         counter_labels[label] = lbl
 
@@ -167,7 +174,9 @@ def build_gui(root, fig, start_callback, stop_callback, calibrate_silence):
             fg="white",
             width=4,
             command=lambda f=freq: threading.Thread(
-                target=tone_player.play_tone_once, args=(f, 5), daemon=True
+                target=tone_player.play_tone_once,
+                args=(f, 5),
+                daemon=True
             ).start()
         )
         btn_test_5s.grid(row=row, column=col + 1, padx=5)
