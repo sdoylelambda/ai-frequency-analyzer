@@ -10,6 +10,9 @@ class TonePlayer:
         self.stop_flags = {}       # freq → threading.Event()
         self.is_playing = False
         self.play_thread = None
+        self.sample_rate = 44100  # <--- add this
+        self.stream = None  # optional, keeps linters happy
+        self.active_streams = {}  # for toggle_tone
 
     # --- Normalize frequency into a consistent base octave ---
     def normalize_octave(self, freq):
@@ -48,20 +51,22 @@ class TonePlayer:
         stop_flag = threading.Event()
         self.stop_flags[freq] = stop_flag
 
-        sample_rate = 44100
-        cycle_len = int(sample_rate / freq)
+        # Use class sample_rate (avoid local variable warnings)
+        sample_rate = self.sample_rate
 
-        t = np.linspace(0, cycle_len / sample_rate, cycle_len, False)
-        wave = np.sin(2 * np.pi * freq * t).astype(np.float32)
+        # Keep phase continuous
+        phase = 0.0
 
-        # Seamless infinite loop without pulsing
         def callback(outdata, frames, time, status):
+            nonlocal phase
             if stop_flag.is_set():
+                outdata[:] = 0
                 raise sd.CallbackStop()
 
-            reps = int(np.ceil(frames / len(wave)))
-            tiled = np.tile(wave, reps)[:frames]
-            outdata[:] = tiled.reshape(-1, 1)
+            t = np.arange(frames) / sample_rate
+            outdata[:, 0] = np.sin(phase + 2 * np.pi * freq * t).astype(np.float32)
+            phase += 2 * np.pi * freq * frames / sample_rate
+            phase = phase % (2 * np.pi)  # keep phase in a reasonable range
 
         stream = sd.OutputStream(
             samplerate=sample_rate,
