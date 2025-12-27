@@ -131,7 +131,7 @@ def build_gui(root, fig, start_callback, stop_callback, calibrate_silence):
     freq_canvas.bind_all("<Button-5>", _on_mousewheel_linux)
 
     # ---------------------------------------------------------------------
-    # Your Frequency Counter Items (UNCHANGED)
+    # Frequency Counter Items
     # ---------------------------------------------------------------------
 
     counter_labels = {}
@@ -210,6 +210,80 @@ def build_gui(root, fig, start_callback, stop_callback, calibrate_silence):
     alert_text.grid(row=6, column=0, columnspan=2, pady=5, sticky='nsew')
     alert_text.insert('end', "⚡ Frequency Alert Log ⚡\n\n")
     alert_text.config(state='disabled')
+
+    # =========================
+    # Frequency Sweep Controls
+    # =========================
+
+    sweep_start_var = tk.StringVar(value="80")
+    sweep_end_var = tk.StringVar(value="8000")
+    sweep_duration_var = tk.StringVar(value="10")
+    sweep_playing = tk.BooleanVar(value=False)
+
+    def toggle_sweep():
+        try:
+            start_str = sweep_start_var.get().strip()
+            end_str = sweep_end_var.get().strip()
+            duration = float(sweep_duration_var.get())
+
+            start = float(start_str)
+            end = float(end_str) if end_str else None
+
+            if start <= 0 or duration <= 0:
+                raise ValueError
+
+        except ValueError:
+            print("Invalid sweep parameters")
+            return
+
+        # --- STOP ---
+        if tone_player.is_playing:
+            tone_player.stop()
+            sweep_playing.set(False)
+            btn_sweep.config(text="▶️ Play")
+            return
+
+        # --- SINGLE FREQUENCY MODE ---
+        if end is None or abs(end - start) < 0.01:
+            tone_player.toggle_single_tone(start)
+            sweep_playing.set(True)
+            btn_sweep.config(text="⏹ Stop")
+            print(f"Playing single tone: {start} Hz")
+            return
+
+        # --- SWEEP MODE ---
+        if end <= start:
+            print("End frequency must be greater than start")
+            return
+
+        tone_player.toggle_sweep(start, end, duration)
+        sweep_playing.set(True)
+        btn_sweep.config(text="⏹ Stop Sweep")
+        print(f"Sweeping {start} → {end} Hz")
+
+    sweep_frame = tk.Frame(scrollable_frame, bg="black")
+    sweep_frame.grid(columnspan=3, pady=10, sticky="w", row=0)
+
+    tk.Label(sweep_frame, text="Sweep:", fg="white", bg="black").pack(side="left", padx=5)
+
+    tk.Entry(sweep_frame, textvariable=sweep_start_var, width=6).pack(side="left")
+    tk.Label(sweep_frame, text="→", fg="white", bg="black").pack(side="left", padx=2)
+
+    tk.Entry(sweep_frame, textvariable=sweep_end_var, width=6).pack(side="left")
+    tk.Label(sweep_frame, text="Hz", fg="white", bg="black").pack(side="left", padx=5)
+
+    tk.Label(sweep_frame, text="Duration (s):", fg="white", bg="black").pack(side="left", padx=5)
+    tk.Entry(sweep_frame, textvariable=sweep_duration_var, width=4).pack(side="left")
+
+    btn_sweep = tk.Button(
+        sweep_frame,
+        text="▶️ Play Tone(s)",
+        bg="gray20",
+        fg="white",
+        width=10,
+        command=toggle_sweep
+    )
+    btn_sweep.pack(side="left", padx=5)
 
     # === Matplotlib Canvas ===
     canvas = FigureCanvasTkAgg(fig, master=root)
