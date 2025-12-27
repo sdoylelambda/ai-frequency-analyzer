@@ -8,6 +8,8 @@ class TonePlayer:
     def __init__(self):
         self.active_streams = {}   # freq → stream
         self.stop_flags = {}       # freq → threading.Event()
+        self.is_playing = False
+        self.play_thread = None
 
     # --- Normalize frequency into a consistent base octave ---
     def normalize_octave(self, freq):
@@ -70,3 +72,107 @@ class TonePlayer:
 
         self.active_streams[freq] = stream
         stream.start()
+
+    def stop(self):
+        self.is_playing = False
+
+        if hasattr(self, "stream"):
+            try:
+                self.stream.stop()
+                self.stream.close()
+            except Exception:
+                pass
+
+        self.stream = None
+
+    def play_sweep(self, start_freq, end_freq, duration):
+        self.is_playing = True
+        sample_rate = 44100
+        total_samples = int(sample_rate * duration)
+
+        self.phase = 0.0
+        self.sample_index = 0
+
+        def callback(outdata, frames, time_info, status):
+            if not self.is_playing:
+                outdata[:] = 0
+                raise sd.CallbackStop()
+
+            output = np.zeros(frames, dtype=np.float32)
+
+            for i in range(frames):
+                t = self.sample_index / sample_rate
+
+                if t >= duration:
+                    self.is_playing = False
+                    raise sd.CallbackStop()
+
+                # ✅ LOGARITHMIC SWEEP (this is your line — correct place)
+                freq = start_freq * (end_freq / start_freq) ** (t / duration)
+
+                # phase increment (this is the key)
+                self.phase += 2 * np.pi * freq / sample_rate
+                output[i] = np.sin(self.phase)
+
+                self.sample_index += 1
+
+            outdata[:, 0] = output
+
+        self.stream = sd.OutputStream(
+            samplerate=sample_rate,
+            channels=1,
+            callback=callback,
+            dtype="float32"
+        )
+
+        self.stream.start()
+
+        self.stream = sd.OutputStream(
+            channels=1,
+            callback=callback,
+            samplerate=self.sample_rate,
+            dtype="float32"
+        )
+
+        self.stream.start()
+
+    def toggle_sweep(self, start_freq, end_freq, duration):
+        if self.is_playing:
+            self.stop()
+            return
+
+        self.play_thread = threading.Thread(
+            target=self.play_sweep,
+            args=(start_freq, end_freq, duration),
+            daemon=True
+        )
+        self.play_thread.start()
+
+    def toggle_single_tone(self, freq):
+        if self.is_playing:
+            self.stop()
+            return
+
+        self.is_playing = True
+        self.current_freq = freq
+
+        def callback(outdata, frames, time, status):
+            if not self.is_playing:
+                outdata[:] = np.zeros((frames, 1), dtype=np.float32)
+                return
+
+            t = (np.arange(frames) + callback.phase) / self.sample_rate
+            outdata[:, 0] = np.sin(2 * np.pi * self.current_freq * t).astype(np.float32)
+            callback.phase += frames
+
+        callback.phase = 0
+
+        self.sample_rate = 44100
+        self.stream = sd.OutputStream(
+            channels=1,
+            callback=callback,
+            samplerate=self.sample_rate,
+            dtype='float32'
+        )
+
+        self.stream.start()
