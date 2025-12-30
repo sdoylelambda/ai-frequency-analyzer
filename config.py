@@ -53,25 +53,28 @@ CHAKRA_FREQUENCY_BANDS = []
 base_bands = [
 
     # =========================
-    # Brainwave / EEG bands
+    # Brainwave / EEG bands  --- TYPICAL HARDWARE - OUT OF BOUNDS
     # =========================
-    (0.1, 0.5, "Infra-Delta (physiological / vestibular)", 'darkred'),
-    (0.5, 4.0, "Delta", 'red'),
-    (4.0, 8.0, "Theta", 'lightgreen'),
-    (8.0, 12.0, "Alpha", 'lightpink'),
-    (12.0, 30.0, "Beta", 'orange'),
-    (30.0, 80.0, "Gamma", 'gold'),   # upper bound varies by source
+    # (0.1, 0.5, "Infra-Delta (physiological / vestibular)", 'darkred'),
+    # (0.5, 4.0, "Delta", 'red'),
+    # (4.0, 8.0, "Theta", 'lightgreen'),
+    # (8.0, 12.0, "Alpha", 'lightpink'),
+    # (12.0, 30.0, "Beta", 'orange'),
+    # (30.0, 80.0, "Gamma", 'gold'),   # upper bound varies by source
 
     # =========================
-    # Infrasound / emotional response bands
+    # Infrasound / emotional response bands --- TYPICAL HARDWARE - OUT OF BOUNDS
     # =========================
-    (18.0, 20.0, "Fear / Anxiety Infrasound", 'darkred'),  # well-documented range
-    (70.0, 90.0, "Agitation / Irritation Band", 'tomato'),
+    # (18.0, 20.0, "Fear / Anxiety Infrasound", 'darkred'),  # well-documented range
+    (70.0, 90.0, "70 - 90 Hz - Agitation / Irritation Band", 'tomato'),
+    # (660.0, 675.0, "666 Hz – Symbolic / Cultural Resonance", 'darkred'),
+    # NOTE: no physiological basis; included only because users expect it
+
 
     # =========================
     # Deep resonance / meditative
     # =========================
-    (134.0, 138.0, "OM Resonance – Third Eye (Low Octave)", 'purple'),
+    (134.0, 138.0, "136.1 Hz - OM Resonance – Third Eye (Low Octave)", 'purple'),
     # NOTE: 136.1 Hz is the most cited value; range widened slightly for detection stability
 
     # =========================
@@ -84,33 +87,36 @@ base_bands = [
     # =========================
     # Chakra system (harmonic model)
     # =========================
-    (248.0, 272.0, "Root Chakra (Low Harmonic)", 'red'),
+    (248.0, 272.0, "256-272 Hz - Root Chakra (Low Harmonic)", 'red'),
     # commonly cited roots: ~256, ~272
+    (389, 401, "396Hz – Root Chakra", 'red'),
 
-    (276.0, 304.0, "Sacral Chakra", 'orange'),
+    (276.0, 304.0, "290Hz - Sacral Chakra", 'orange'),
     # overlaps musical D–E range; intentionally moderate width
+    (414, 420, "417Hz Sacral Chakra", 'orange'),
+    # Other sources cite 417 hz
 
-    (308.0, 348.0, "Solar Plexus Chakra", 'yellow'),
+    (308.0, 348.0, "320–341 Hz - Solar Plexus Chakra", 'yellow'),
     # includes 320–341 commonly cited values
 
     # =========================
     # Heart chakra (dual activation)
     # =========================
-    (418.0, 446.0, "Heart Chakra – Coherence (432 Hz)", 'green'),
+    (418.0, 446.0, "432 Hz - Heart Chakra – Coherence ", 'green'),
     # NOTE: 432 Hz is not exclusive to heart, but strongly associated with coherence
 
-    (620.0, 660.0, "Heart Chakra – Relational (639 Hz)", 'green'),
+    (620.0, 660.0, "639 Hz - Heart Chakra – Relational ", 'green'),
     # NOTE: 639 Hz is the canonical solfeggio heart frequency
 
     # =========================
     # Upper chakras
     # =========================
-    (720.0, 780.0, "Throat Chakra (741 Hz)", 'cyan'),
+    (720.0, 780.0, "741 Hz - Throat Chakra ", 'cyan'),
 
-    (820.0, 880.0, "Third Eye Chakra (852 Hz)", 'indigo'),
+    (820.0, 880.0, "852 Hz - Third Eye Chakra ", 'indigo'),
     # complements 136.1 Hz as higher octave / cognitive activation
 
-    (940.0, 1000.0, "Crown Chakra (963 Hz)", 'violet'),
+    (940.0, 1000.0, "963 Hz - Crown Chakra ", 'violet'),
 
     # =========================
     # Solfeggio system (explicit, non-chakra)
@@ -130,8 +136,6 @@ base_bands = [
     # =========================
     # High symbolic / metaphysical bands
     # =========================
-    (660.0, 675.0, "666 Hz – Symbolic / Cultural Resonance", 'darkred'),
-    # NOTE: no physiological basis; included only because users expect it
 
     (760.0, 800.0, "777 Hz – Positive Flow / Alignment", 'gold'),
     # NOTE: less standardized; range chosen conservatively
