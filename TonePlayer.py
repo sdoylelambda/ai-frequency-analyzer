@@ -48,7 +48,8 @@ class TonePlayer:
     # One-shot tone
     # --------------------------
     def play_tone_once(self, freq, duration):
-        freq = self.normalize_octave(freq)
+        # freq = self.normalize_octave(freq)
+        print(f"🎵 Starting continuous tone: {freq} Hz")
         t = np.linspace(0, duration, int(self.sample_rate * duration), False)
         tone = np.sin(2 * np.pi * freq * t).astype(np.float32)
         sd.play(tone, self.sample_rate)
@@ -58,7 +59,7 @@ class TonePlayer:
     # Continuous tone toggle
     # --------------------------
     def toggle_tone(self, freq):
-        freq = self.normalize_octave(freq)
+        # freq = self.normalize_octave(freq)
 
         if self.is_playing and self.mode == "tone":
             self.stop()
