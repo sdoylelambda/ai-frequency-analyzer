@@ -138,7 +138,15 @@ def build_gui(root, fig, start_callback, stop_callback, calibrate_silence):
     frequency_counts = {}
     counter_vars = {}
 
+    def on_audio_stopped():
+        single_playing.set(False)
+        sweep_playing.set(False)
+
+        btn_single.config(text="▶️ Play")
+        btn_sweep.config(text="▶️ Play Tone(s)")
+
     tone_player = TonePlayer()
+    tone_player.set_on_stop_callback(on_audio_stopped)
 
     for idx, (low, high, label, color) in enumerate(CHAKRA_FREQUENCY_BANDS):
 
@@ -210,6 +218,52 @@ def build_gui(root, fig, start_callback, stop_callback, calibrate_silence):
     alert_text.grid(row=6, column=0, columnspan=2, pady=5, sticky='nsew')
     alert_text.insert('end', "⚡ Frequency Alert Log ⚡\n\n")
     alert_text.config(state='disabled')
+
+    single_freq_var = tk.StringVar(value="432")
+    single_dur_var = tk.StringVar(value="5")
+    single_playing = tk.BooleanVar(value=False)
+
+    def toggle_single_tone():
+        try:
+            freq = float(single_freq_var.get())
+            duration = float(single_dur_var.get())
+            if freq <= 0 or duration <= 0:
+                raise ValueError
+        except ValueError:
+            print("Invalid single tone parameters")
+            return
+
+        if tone_player.is_playing:
+            tone_player.stop()
+            single_playing.set(False)
+            btn_single.config(text="▶️ Play")
+            return
+
+        tone_player.toggle_timed_tone(freq, duration)
+        single_playing.set(True)
+        btn_single.config(text="⏹ Stop")
+        print(f"Playing {freq} Hz for {duration} s")
+
+    single_frame = tk.Frame(scrollable_frame, bg="black")
+    single_frame.grid(columnspan=3, pady=10, sticky="w", row=1)
+
+    tk.Label(single_frame, text="Single Tone:", fg="white", bg="black").pack(side="left", padx=5)
+
+    tk.Entry(single_frame, textvariable=single_freq_var, width=6).pack(side="left")
+    tk.Label(single_frame, text="Hz", fg="white", bg="black").pack(side="left", padx=5)
+
+    tk.Label(single_frame, text="Duration (s):", fg="white", bg="black").pack(side="left", padx=5)
+    tk.Entry(single_frame, textvariable=single_dur_var, width=4).pack(side="left")
+
+    btn_single = tk.Button(
+        single_frame,
+        text="▶️ Play",
+        bg="gray20",
+        fg="white",
+        width=10,
+        command=toggle_single_tone
+    )
+    btn_single.pack(side="left", padx=5)
 
     # =========================
     # Frequency Sweep Controls

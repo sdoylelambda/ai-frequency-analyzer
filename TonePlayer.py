@@ -10,6 +10,7 @@ class TonePlayer:
         self.stream = None
         self.is_playing = False
         self.mode = None   # "tone" or "sweep"
+        self.on_stop_callback = None
 
         # tone state
         self.current_freq = 440.0
@@ -24,6 +25,9 @@ class TonePlayer:
     # --------------------------
     # Utility
     # --------------------------
+    def set_on_stop_callback(self, callback):
+        self.on_stop_callback = callback
+
     def normalize_octave(self, freq):
         f = float(freq)
         while f > 450:
@@ -31,6 +35,9 @@ class TonePlayer:
         return f
 
     def stop(self):
+        if not self.is_playing:
+            return
+
         self.is_playing = False
         self.mode = None
 
@@ -40,6 +47,9 @@ class TonePlayer:
                 self.stream.close()
             except Exception:
                 pass
+
+        if self.on_stop_callback:
+            self.on_stop_callback()
 
         self.stream = None
         self.phase = 0.0
@@ -118,7 +128,7 @@ class TonePlayer:
 
             for i in range(frames):
                 if self.sweep_sample_index >= total_samples:
-                    self.is_playing = False
+                    self.stop()
                     raise sd.CallbackStop()
 
                 t = self.sweep_sample_index / self.sample_rate
@@ -139,4 +149,47 @@ class TonePlayer:
             dtype="float32",
             callback=callback
         )
+        self.stream.start()
+
+    # --------------------------
+    # Play Custom Tone
+    # --------------------------
+    def toggle_timed_tone(self, freq, duration):
+        # Stop anything already playing
+        if self.is_playing:
+            self.stop()
+            return
+
+        self.is_playing = True
+        self.mode = "timed"
+        self.current_freq = float(freq)
+        self.phase = 0.0
+        self.start_time = time.time()
+
+        def callback(outdata, frames, time_info, status):
+            if not self.is_playing:
+                outdata[:] = 0
+                raise sd.CallbackStop()
+
+            elapsed = time.time() - self.start_time
+            if elapsed >= duration:
+                self.stop()
+                outdata[:] = 0
+                raise sd.CallbackStop()
+
+            t = np.arange(frames) / self.sample_rate
+            outdata[:, 0] = np.sin(
+                self.phase + 2 * np.pi * self.current_freq * t
+            ).astype(np.float32)
+
+            self.phase += 2 * np.pi * self.current_freq * frames / self.sample_rate
+            self.phase %= 2 * np.pi
+
+        self.stream = sd.OutputStream(
+            samplerate=self.sample_rate,
+            channels=1,
+            dtype="float32",
+            callback=callback
+        )
+
         self.stream.start()
