@@ -1,5 +1,6 @@
 import customtkinter as ctk
 
+
 DISCLAIMER_TEXT = """ 
 DISCLAIMER & TERMS OF USE
 

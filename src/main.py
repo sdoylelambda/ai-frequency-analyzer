@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import tkinter as tk
 import customtkinter as ctk
 import webbrowser
-import pyperclip  # pip install pyperclip
+import pyperclip
 import threading
 import sounddevice as sd
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -17,8 +17,6 @@ from src.gui.disclaimer import show_disclaimer
 from src.gui.setup import show_setup
 from utils.config import SAMPLE_RATE, FRAME_SIZE
 from tkinter import Button, Toplevel, Label, Text, RIGHT, Frame, Scrollbar, Y, BOTH
-
-# Removed import here for latest fine-tuning
 
 
 CHAKRA_EFFECTS = {

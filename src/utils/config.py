@@ -7,7 +7,7 @@ CHAKRA_FREQUENCY_BANDS = []
 base_bands = [
 
     # =========================
-    # Brainwave / EEG bands  --- TYPICAL HARDWARE - OUT OF BOUNDS
+    # Brainwave / EEG bands  --- TYPICAL HARDWARE - OUT OF BOUNDS - add to config
     # =========================
     # (0.1, 0.5, "Infra-Delta (physiological / vestibular)", 'darkred'),
     # (0.5, 4.0, "Delta", 'red'),
@@ -103,6 +103,3 @@ base_bands = [
 for band in base_bands:
     CHAKRA_FREQUENCY_BANDS.append(band)
     # CHAKRA_FREQUENCY_BANDS.extend(generate_harmonics(band))
-
-
-
