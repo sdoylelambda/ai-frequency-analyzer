@@ -7,15 +7,15 @@ import pyperclip  # pip install pyperclip
 import threading
 import sounddevice as sd
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from audio_stream import AudioStream
-from fft_processor import compute_fft, detect_peaks
-from src.alert_system import log_alert_to_file, log_alert_to_gui
-from logger import log_to_gui
-from gui import build_gui
-from TonePlayer import TonePlayer
-from disclaimer import show_disclaimer
-from setup import show_setup
-from src.config import SAMPLE_RATE, FRAME_SIZE
+from src.audio.audio_stream import AudioStream
+from src.processing.fft_processor import compute_fft, detect_peaks
+from src.gui.alert_system import log_alert_to_file, log_alert_to_gui
+from utils.logger import log_to_gui
+from src.gui.gui import build_gui
+from src.audio.TonePlayer import TonePlayer
+from src.gui.disclaimer import show_disclaimer
+from src.gui.setup import show_setup
+from utils.config import SAMPLE_RATE, FRAME_SIZE
 from tkinter import Button, Toplevel, Label, Text, RIGHT, Frame, Scrollbar, Y, BOTH
 
 # Removed import here for latest fine-tuning

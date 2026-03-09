@@ -1,5 +1,5 @@
 import numpy as np
-from src.alert_system import match_frequency_to_band
+from src.gui.gui import match_frequency_to_band
 from collections import deque
 
 
