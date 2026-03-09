@@ -1,6 +1,7 @@
 import numpy as np
 import sounddevice as sd
 
+
 # Settings
 duration = 5  # seconds
 sample_rate = 44100

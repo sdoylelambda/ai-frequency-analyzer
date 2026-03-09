@@ -1,5 +1,3 @@
-# audio_stream.py
-
 import pyaudio
 import struct
 import numpy as np
