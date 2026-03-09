@@ -2,10 +2,8 @@ import tkinter as tk
 import threading
 from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import matplotlib.pyplot as plt
-from config import CHAKRA_FREQUENCY_BANDS
-from collections import defaultdict
-from alert_system import match_frequency_to_band
+from src.config import CHAKRA_FREQUENCY_BANDS
+from src.alert_system import match_frequency_to_band
 from TonePlayer import TonePlayer
 
 

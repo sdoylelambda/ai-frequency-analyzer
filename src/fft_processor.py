@@ -1,9 +1,6 @@
 import numpy as np
-from alert_system import match_frequency_to_band
-from scipy.signal import find_peaks
+from src.alert_system import match_frequency_to_band
 from collections import deque
-from scipy.ndimage import gaussian_filter1d
-from config import CHAKRA_FREQUENCY_BANDS
 
 
 def compute_fft(audio_buffer, sample_rate=44100):

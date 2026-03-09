@@ -1,9 +1,7 @@
-import tkinter as tk
 import numpy as np
 import matplotlib.pyplot as plt
 import tkinter as tk
 import customtkinter as ctk
-from tkinter import Button
 import webbrowser
 import pyperclip  # pip install pyperclip
 import threading
@@ -11,15 +9,14 @@ import sounddevice as sd
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from audio_stream import AudioStream
 from fft_processor import compute_fft, detect_peaks
-from alert_system import log_alert_to_file, log_alert_to_gui
+from src.alert_system import log_alert_to_file, log_alert_to_gui
 from logger import log_to_gui
 from gui import build_gui
 from TonePlayer import TonePlayer
 from disclaimer import show_disclaimer
-from frequency_detector_tools import frequency_generators
 from setup import show_setup
-from config import SAMPLE_RATE, FRAME_SIZE, CHAKRA_FREQUENCY_BANDS, FILTER_STRENGTH_DEFAULT
-from tkinter import Button, Toplevel, Label, END, Text, RIGHT, Frame, Scrollbar, Y, BOTH
+from src.config import SAMPLE_RATE, FRAME_SIZE
+from tkinter import Button, Toplevel, Label, Text, RIGHT, Frame, Scrollbar, Y, BOTH
 
 # Removed import here for latest fine-tuning
 

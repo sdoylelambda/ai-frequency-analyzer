@@ -1,5 +1,3 @@
-# logger.py
-
 from datetime import datetime
 
 

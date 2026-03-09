@@ -1,5 +1,5 @@
 from datetime import datetime
-from config import CHAKRA_FREQUENCY_BANDS
+from src.config import CHAKRA_FREQUENCY_BANDS
 
 
 # def get_adaptive_tolerance(freq):

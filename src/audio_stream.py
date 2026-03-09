@@ -3,7 +3,7 @@
 import pyaudio
 import struct
 import numpy as np
-from config import SAMPLE_RATE, FRAME_SIZE
+from src.config import SAMPLE_RATE, FRAME_SIZE
 
 
 class AudioStream:

@@ -1,6 +1,7 @@
 import customtkinter as ctk
 import webbrowser
 
+
 DONATION_URL = "https://cymatics-frequncy-analyzer.netlify.app/"
 
 SETUP_TEXT = """
