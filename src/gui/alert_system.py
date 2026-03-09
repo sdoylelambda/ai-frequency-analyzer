@@ -2,41 +2,6 @@ from datetime import datetime
 from src.utils.config import CHAKRA_FREQUENCY_BANDS
 
 
-# def get_adaptive_tolerance(freq):
-#     """
-#     Compute a dynamic tolerance based on frequency.
-#     Lower frequencies get tighter tolerance; higher freqs get more slack.
-#     """
-#     if freq <= 0:
-#         return 0
-#     base_tolerance = 0.0001  # min % tolerance at low freqs
-#     max_tolerance = 500.0   # max % tolerance at high freqs
-#     scale = (math.log10(freq) - 2) / 2.0  # log scale from 100Hz to 10kHz
-#     scale = min(max(scale, 0), 1)  # clamp between 0 and 1
-#     percent = base_tolerance + (max_tolerance - base_tolerance) * scale
-#     return freq * percent / 100
-#
-#
-# def match_frequency_to_band(frequency):
-#     """
-#     Match the given frequency to one of the predefined chakra or alert frequency bands.
-#     Uses adaptive frequency tolerance.
-#     """
-#     for low, high, label, color in CHAKRA_FREQUENCY_BANDS:
-#         center = (low + high) / 2
-#         tolerance = get_adaptive_tolerance(center)
-#         if (center - tolerance) <= frequency <= (center + tolerance):
-#             return label, color
-#     return None, None
-
-# def match_frequency_to_band(freq, bands=CHAKRA_FREQUENCY_BANDS):
-#     for start, end, label, color in bands:
-#         center = (start + end) / 2
-#         tolerance = center * 0.02  # 2% range
-#         if abs(freq - center) <= tolerance:
-#             return label, color
-#     return None, None
-
 def match_frequency_to_band(freq, bands=CHAKRA_FREQUENCY_BANDS, global_tolerance=0.02, debug=False):
     closest = None
     min_diff = float('inf')
