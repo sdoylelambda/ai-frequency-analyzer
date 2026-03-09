@@ -1,8 +1,6 @@
 # === Python ===
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
 *.so
 *.egg
 *.egg-info/
@@ -19,6 +17,7 @@ pip-log.txt
 *.db
 *.dat
 *.tmp
+*$py.class
 
 # === Jupyter / IPython (if used) ===
 .ipynb_checkpoints
@@ -33,6 +32,7 @@ desktop.ini
 # === IDEs ===
 .vscode/
 .idea/
+*.iml
 *.sublime-project
 *.sublime-workspace
 
