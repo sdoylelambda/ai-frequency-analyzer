@@ -66,7 +66,7 @@ flutter_export_environment.sh
 
 # === Logs / Output Files ===
 *.log
-frequency_alerts.log
+src/logs/frequency_alerts.log
 
 # === Test Artifacts ===
 coverage/

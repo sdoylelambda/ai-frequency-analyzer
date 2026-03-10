@@ -1,6 +1,5 @@
 import numpy as np
 import sounddevice as sd
-import threading
 import time
 
 
@@ -164,7 +163,7 @@ class TonePlayer:
         self.mode = "timed"
         self.current_freq = float(freq)
         self.phase = 0.0
-        self.start_time = time.time()
+        self.start_time = time.time()  # add to init
 
         def callback(outdata, frames, time_info, status):
             if not self.is_playing:

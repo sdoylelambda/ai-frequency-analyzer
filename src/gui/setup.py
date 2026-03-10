@@ -1,6 +1,7 @@
 import customtkinter as ctk
 import webbrowser
 
+
 DONATION_URL = "https://cymatics-frequncy-analyzer.netlify.app/"
 
 SETUP_TEXT = """
@@ -86,8 +87,5 @@ def show_setup(root):
 
     # Handle window X safely
     popup.protocol("WM_DELETE_WINDOW", close_popup)
-
-    # Do NOT use wait_window — modal behavior is handled by grab_set
-    # root.wait_window(popup)  # remove this line
 
     return popup
