@@ -7,16 +7,15 @@ import pyperclip
 import threading
 import sounddevice as sd
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from tkinter import Button, Toplevel, Label, Text, RIGHT, Frame, Scrollbar, Y, BOTH
 from src.audio.audio_stream import AudioStream
 from src.processing.fft_processor import compute_fft, detect_peaks
 from src.gui.alert_system import log_alert_to_file, log_alert_to_gui
 from src.utils.logger import log_to_gui
 from src.gui.gui import build_gui
 from src.audio.TonePlayer import TonePlayer
-from src.gui.disclaimer import show_disclaimer
-from src.gui.setup import show_setup
 from src.utils.config import SAMPLE_RATE, FRAME_SIZE
-from tkinter import Button, Toplevel, Label, Text, RIGHT, Frame, Scrollbar, Y, BOTH
+from src.models import analysis_engine
 
 
 CHAKRA_EFFECTS = {
@@ -160,6 +159,13 @@ class AudioVisualizerApp:
             font=self.DEFAULT_BUTTON_FONT, corner_radius=self.DEFAULT_BUTTON_CORNER_RADIUS
         )
         self.widgets["review_btn"].grid(row=2, column=1, columnspan=3, pady=5)
+
+        # Phi3 Model Review Buttons
+        # self.widgets["phi_btn"] = ctk.CTkButton(
+        #     self.frame, text="Generate Review", command=self.phi_review,
+        #     font=self.DEFAULT_BUTTON_FONT, corner_radius=self.DEFAULT_BUTTON_CORNER_RADIUS
+        # )
+        # self.widgets["phi_btn"].grid(row=2, column=1, columnspan=3, pady=5)
 
         # Status label
         self.widgets["status_label"] = ctk.CTkLabel(
@@ -530,7 +536,7 @@ class AudioVisualizerApp:
             balance_lines.append("\n⚠️ Observations:")
             balance_lines.extend(balance["flags"])
 
-        # --- Pop-up Window ---
+        # --- Pop-up Window - Review ---
         popup = Toplevel(self.root)
         popup.title("Chakra Activation Review")
         popup.geometry("600x1000")
@@ -563,20 +569,69 @@ class AudioVisualizerApp:
 
         CHATGPT_URL = "https://chat.openai.com/"
 
-        def add_ai_review_button(popup, review_text):
-            def open_chatgpt():
-                pyperclip.copy(review_text)  # Copy review to clipboard
-                webbrowser.open(CHATGPT_URL)  # Open ChatGPT in browser
+        def open_ai_review():
+            ai_popup = Toplevel(self.root)
+            ai_popup.title("✨ AI Chakra Analysis")
+            ai_popup.geometry("600x1000")
 
-            Button(
-                popup,
-                text="🤖 AI Review (via ChatGPT) - paste (control + v) into text box",
-                command=open_chatgpt,
-                bg="purple",
-                fg="white"
-            ).pack(pady=10)
+            Label(ai_popup, text="✨ AI Chakra Analysis", font=("Helvetica", 14, "bold")).pack(pady=10)
 
-        add_ai_review_button(popup, review_text)
+            frame = Frame(ai_popup)
+            frame.pack(fill=BOTH, expand=True, padx=10, pady=5)
+
+            scrollbar = Scrollbar(frame)
+            scrollbar.pack(side=RIGHT, fill=Y)
+
+            textbox = Text(frame, wrap="word", yscrollcommand=scrollbar.set, font=("Helvetica", 10))
+            textbox.pack(side="left", fill=BOTH, expand=True)
+            scrollbar.config(command=textbox.yview)
+
+            # Lets user know it's thinking
+            textbox.insert("1.0", "⏳ Analyzing... please wait.")
+            textbox.config(state="disabled")
+
+            Button(ai_popup, text="Close", command=ai_popup.destroy).pack(pady=15)
+
+            # run analysis and update textbox
+            def run_analysis():
+                result = analysis_engine.generate_analysis(review_text)
+                textbox.config(state="normal")
+                textbox.delete("1.0", "end")
+                textbox.insert("1.0", result)
+                textbox.config(state="disabled")
+
+            ai_popup.after(100, run_analysis)  # slight delay so popup renders first
+
+        Button(
+            popup,
+            text="✨ AI Analysis",
+            command=open_ai_review,
+            bg="purple",
+            fg="white",
+            font=("Helvetica", 10, "bold")
+        ).pack(pady=10)
+
+        # legacy: clipboard -> chatgpt flow, replaced by analysis_engine.py
+        # def open_chatgpt():
+        #     pyperclip.copy(review_text)
+        #     webbrowser.open("https://chat.openai.com/")
+        #
+        # Button(popup, text="🤖 AI Review (via ChatGPT) - paste (control + v) into text box",
+        #        command=open_chatgpt, bg="purple", fg="white").pack(pady=10)
+            # legacy: clipboard -> chatgpt flow, replaced by analysis_engine.py
+            # def open_chatgpt():
+            #     pyperclip.copy(review_text)  # Copy review to clipboard
+            #     webbrowser.open(CHATGPT_URL)  # Open ChatGPT in browser
+            #
+            # Button(
+            #     popup,
+            #     text="🤖 AI Review (via ChatGPT) - paste (control + v) into text box",
+            #     command=open_chatgpt,
+            #     bg="purple",
+            #     fg="white"
+            # ).pack(pady=10)
+
+        open_ai_review(popup, review_text)
 
     def alert_chakra_flags(self, flags):
         if flags:
