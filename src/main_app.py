@@ -2,21 +2,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tkinter as tk
 import customtkinter as ctk
-import webbrowser
-import pyperclip
 import threading
 import sounddevice as sd
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from tkinter import Button, Toplevel, Label, Text, RIGHT, Frame, Scrollbar, Y, BOTH
 from src.audio.audio_stream import AudioStream
 from src.processing.fft_processor import compute_fft, detect_peaks
 from src.gui.alert_system import log_alert_to_file, log_alert_to_gui
 from src.utils.logger import log_to_gui
 from src.gui.gui import build_gui
 from src.audio.TonePlayer import TonePlayer
-from src.gui.disclaimer import show_disclaimer
-from src.gui.setup import show_setup
 from src.utils.config import SAMPLE_RATE, FRAME_SIZE
-from tkinter import Button, Toplevel, Label, Text, RIGHT, Frame, Scrollbar, Y, BOTH
+from src.models import analysis_engine
 
 
 CHAKRA_EFFECTS = {
@@ -483,6 +480,7 @@ class AudioVisualizerApp:
 
         # Turn full review into one string
         review_text = "\n".join(balance_lines)
+        print(F'REVIEW TEXT: {review_text}')
 
         # Helper: extract the first frequency from a label to sort by Hz
         def _extract_freq_from_label(text):
@@ -529,7 +527,7 @@ class AudioVisualizerApp:
             balance_lines.append("\n⚠️ Observations:")
             balance_lines.extend(balance["flags"])
 
-        # --- Pop-up Window ---
+        # --- Pop-up Window - Review ---
         popup = Toplevel(self.root)
         popup.title("Chakra Activation Review")
         popup.geometry("600x1000")
@@ -562,20 +560,51 @@ class AudioVisualizerApp:
 
         CHATGPT_URL = "https://chat.openai.com/"
 
-        def add_ai_review_button(popup, review_text):
-            def open_chatgpt():
-                pyperclip.copy(review_text)  # Copy review to clipboard
-                webbrowser.open(CHATGPT_URL)  # Open ChatGPT in browser
+        def open_ai_review():
+            ai_popup = Toplevel(self.root)
+            ai_popup.title("✨ AI Chakra Analysis")
+            ai_popup.geometry("600x1000")
 
-            Button(
-                popup,
-                text="🤖 AI Review (via ChatGPT) - paste (control + v) into text box",
-                command=open_chatgpt,
-                bg="purple",
-                fg="white"
-            ).pack(pady=10)
+            Label(ai_popup, text="✨ AI Chakra Analysis", font=("Helvetica", 14, "bold")).pack(pady=10)
 
-        add_ai_review_button(popup, review_text)
+            frame = Frame(ai_popup)
+            frame.pack(fill=BOTH, expand=True, padx=10, pady=5)
+
+            scrollbar = Scrollbar(frame)
+            scrollbar.pack(side=RIGHT, fill=Y)
+
+            textbox = Text(frame, wrap="word", yscrollcommand=scrollbar.set, font=("Helvetica", 10))
+            textbox.pack(side="left", fill=BOTH, expand=True)
+            scrollbar.config(command=textbox.yview)
+
+            textbox.insert("1.0", "⏳ Analyzing... please wait.")
+            textbox.config(state="disabled")
+
+            Button(ai_popup, text="Close", command=ai_popup.destroy).pack(pady=15)
+
+            def run_analysis():
+                result = analysis_engine.generate_analysis(review_text)
+                # must update UI from main thread
+                ai_popup.after(0, lambda: update_textbox(result))
+
+            def update_textbox(result):
+                textbox.config(state="normal")
+                textbox.delete("1.0", "end")
+                textbox.insert("1.0", result)
+                textbox.config(state="disabled")
+
+            threading.Thread(target=run_analysis, daemon=True).start()
+
+        Button(
+            popup,
+            text="✨ AI Analysis",
+            command=open_ai_review,
+            bg="purple",
+            fg="white",
+            font=("Helvetica", 10, "bold")
+        ).pack(pady=10)
+
+        open_ai_review(popup, review_text)
 
     def alert_chakra_flags(self, flags):
         if flags:
@@ -844,37 +873,3 @@ class AudioVisualizerApp:
 
         self.canvas.draw()
         self.root.after(50, self.animate)
-
-
-# if __name__ == "__main__":
-#     # --- CustomTkinter appearance ---
-#     ctk.set_appearance_mode("dark")
-#     ctk.set_default_color_theme("green")
-#
-#     # --- Initialize main window ---
-#     root = ctk.CTk()
-#     root.title("Audio Visualizer App")
-#
-#     # --- Dynamically size main app to 90% of screen and center ---
-#     screen_width = root.winfo_screenwidth()
-#     screen_height = root.winfo_screenheight()
-#     w = int(screen_width * 0.7)
-#     h = int(screen_height * 0.8)
-#     x = (screen_width - w) // 2
-#     y = (screen_height - h) // 2
-#     root.geometry(f"{w}x{h}+{x}+{y}")
-#
-#     # --- Step 1: Show Disclaimer (modal) ---
-#     disclaimer_popup = show_disclaimer(root)
-#     # Modal handled by grab_set inside show_disclaimer
-#
-#     # --- Step 2: Initialize main app ---
-#     app = AudioVisualizerApp(root)
-#     app.update_all_widgets()  # apply modern fonts and button styling
-#
-#     # --- Step 3: Show Setup (non-modal) ---
-#     setup_popup = show_setup(root)
-#     # Make sure grab_set is removed in show_setup so main app remains usable
-#
-#     # --- Run main loop ---
-#     root.mainloop()
