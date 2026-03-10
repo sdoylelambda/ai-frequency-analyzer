@@ -66,8 +66,8 @@ ios/Flutter/Flutter.framework
 flutter_export_environment.sh
 
 # === Logs / Output Files ===
-*.log
-src/logs/frequency_alerts.log
+#*.log
+#src/logs/frequency_alerts.log
 
 # === Test Artifacts ===
 coverage/
