@@ -586,21 +586,23 @@ class AudioVisualizerApp:
             textbox.pack(side="left", fill=BOTH, expand=True)
             scrollbar.config(command=textbox.yview)
 
-            # Lets user know it's thinking
             textbox.insert("1.0", "⏳ Analyzing... please wait.")
             textbox.config(state="disabled")
 
             Button(ai_popup, text="Close", command=ai_popup.destroy).pack(pady=15)
 
-            # run analysis and update textbox
             def run_analysis():
                 result = analysis_engine.generate_analysis(review_text)
+                # must update UI from main thread
+                ai_popup.after(0, lambda: update_textbox(result))
+
+            def update_textbox(result):
                 textbox.config(state="normal")
                 textbox.delete("1.0", "end")
                 textbox.insert("1.0", result)
                 textbox.config(state="disabled")
 
-            ai_popup.after(100, run_analysis)  # slight delay so popup renders first
+            threading.Thread(target=run_analysis, daemon=True).start()
 
         Button(
             popup,
