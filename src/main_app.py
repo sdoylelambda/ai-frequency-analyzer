@@ -483,6 +483,7 @@ class AudioVisualizerApp:
 
         # Turn full review into one string
         review_text = "\n".join(balance_lines)
+        print(F'REVIEW TEXT: {review_text}')
 
         # Helper: extract the first frequency from a label to sort by Hz
         def _extract_freq_from_label(text):
