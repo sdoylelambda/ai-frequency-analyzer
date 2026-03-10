@@ -30,7 +30,7 @@ def match_frequency_to_band(freq, bands=CHAKRA_FREQUENCY_BANDS, global_tolerance
 def log_alert_to_file(frequency, magnitude, label):
     """Logs a frequency alert to a .log file with timestamp."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    with open("../src/logs/frequency_alerts_testing.log", "a") as log_file:
+    with open("./src/logs/frequency_alerts.log", "a") as log_file:
         log_line = f"[{timestamp}] ALERT: {label or 'Unknown'} — {frequency:.1f} Hz, Magnitude: {magnitude:.1f}\n"
         log_file.write(log_line)
 

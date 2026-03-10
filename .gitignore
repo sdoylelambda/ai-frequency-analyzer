@@ -32,6 +32,7 @@ desktop.ini
 # === IDEs ===
 .vscode/
 .idea/
+.idea_backup/
 *.iml
 *.sublime-project
 *.sublime-workspace
@@ -65,7 +66,6 @@ ios/Flutter/Flutter.framework
 flutter_export_environment.sh
 
 # === Logs / Output Files ===
-*.log
 src/logs/frequency_alerts.log
 
 # === Test Artifacts ===
