@@ -1,0 +1,9 @@
+numpy
+matplotlib
+customtkinter
+pyperclip
+sounddevice
+matplotlib
+pyaudio
+ollama
+requests
