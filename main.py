@@ -2,6 +2,13 @@ from src.main_app import AudioVisualizerApp
 import customtkinter as ctk
 from src.gui.disclaimer import show_disclaimer
 from src.gui.setup import show_setup
+from fastapi import FastAPI
+
+app = FastAPI(title="AI Frequency Analyzer")
+
+@app.get("/")
+def root():
+    return {"status": "running"}
 
 
 if __name__ == "__main__":
